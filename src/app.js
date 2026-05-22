@@ -22,8 +22,7 @@ app.use(errorHandler);
 app.use('/uploads', express.static('src/uploads'));
 
 app.use(cors({
-  origin: process.env.CLIENT_URL,
-  credentials: true,
+  origin: "*",
 }));
 
 app.use(helmet());
