@@ -94,7 +94,7 @@ const createSale = async (req, res, next) => {
       const quantity = Number(item.quantity);
 
       // ===============================
-      // 💰 PRICE TYPE LOGIC FIXED
+      // 💰 PRICE TYPE LOGIC
       // ===============================
       let unitPrice = Number(item.unit_price);
       let priceType = "custom";
@@ -156,17 +156,23 @@ const createSale = async (req, res, next) => {
     const totalAmount = subtotal - globalDiscount;
 
     // ===============================
-    // 🚨 STRICT POS RULE (NO DEBT)
+    // 🚨 PAYMENT VALIDATION - MEILLEURE VERSION
+    // Le montant payé doit être supérieur ou égal au total
+    // Cela permet les trop-perçus (monnaie) tout en interdisant les dettes
     // ===============================
     const paid = Number(amount_paid);
+    const roundedTotal = Math.round(totalAmount * 100) / 100;
+    const roundedPaid = Math.round(paid * 100) / 100;
 
-    if (!amount_paid || paid <= totalAmount) {
+    if (!amount_paid || roundedPaid < roundedTotal) {
       throw new AppError(
-        "Cette vente est une vente directe : le montant payé doit être EXACTEMENT égal au total (pas de dette autorisée).",
+        `Le montant payé (${roundedPaid} FCFA) est insuffisant. Le total de la vente est de ${roundedTotal} FCFA.`,
         400
       );
     }
 
+    // Calcul du rendu de monnaie (si trop-perçu)
+    const changeAmount = roundedPaid > roundedTotal ? roundedPaid - roundedTotal : 0;
     const amountDue = 0;
     const finalPaymentStatus = "paid";
 
@@ -192,9 +198,9 @@ const createSale = async (req, res, next) => {
         discount_type || null,
         discount_value || null,
         0,
-        totalAmount,
+        roundedTotal,
         finalPaymentStatus,
-        totalAmount,
+        roundedPaid,
         amountDue,
         payment_method,
         payment_reference || null,
@@ -291,6 +297,7 @@ const createSale = async (req, res, next) => {
           ...sales[0],
           items: saleItems,
         },
+        change: changeAmount > 0 ? changeAmount : 0,
       },
     });
   } catch (error) {

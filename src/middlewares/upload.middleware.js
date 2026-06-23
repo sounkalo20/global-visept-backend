@@ -1,4 +1,4 @@
-const { uploadCompany, uploadProduct } = require('../config/multer.config');
+const { uploadCompany, uploadProduct, uploadPayment } = require('../config/multer.config');
 const AppError = require('../utils/AppError');
 
 const handleUpload = (uploadInstance) => (req, res, next) => {
@@ -33,8 +33,10 @@ const handleUpload = (uploadInstance) => (req, res, next) => {
 
 const uploadCompanyLogo = handleUpload(uploadCompany);
 const uploadProductImage = handleUpload(uploadProduct);
+const uploadPaymentProof = handleUpload(uploadPayment);
 
 module.exports = {
   uploadCompanyLogo,
   uploadProductImage,
+  uploadPaymentProof
 };

@@ -15,6 +15,20 @@ const clientRoutes = require('./routes/client.routes');
 const debtRoutes = require('./routes/debt.routes');
 const debtPaymentRoutes = require('./routes/debtPayment.routes');
 const expenseRoutes = require('./routes/expense.routes');
+const superAdminRoutes = require('./routes/superAdmin.routes');
+const supplierRoutes = require('./routes/supplier.routes');
+const supplierOrderRoutes = require('./routes/supplierOrder.routes')
+const supplierPaymentRoutes = require('./routes/supplierPayment.routes');
+
+//routes pour les compagnies de type restaurant 
+const restaurantProductRoutes = require('./routes/restaurant/product.routes');
+const restaurantSaleRoutes = require('./routes/restaurant/sale.routes');
+const restaurantDebtRoutes = require('./routes/restaurant/debt.routes');
+const restaurantPaymentRoutes = require('./routes/restaurant/payment.route');
+
+//dashboard routes
+const dashboardRoutes = require('./routes/dashboard.routes');
+const restaurantDashboardRoutes = require('./routes/restaurant/dashboard.routes');
 
 
 const app = express();
@@ -41,6 +55,20 @@ app.use('/api/clients', clientRoutes);
 app.use('/api/debts', debtRoutes);
 app.use('/api/debt-payments', debtPaymentRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/super-admin', superAdminRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/supplier-orders', supplierOrderRoutes);
+app.use('/api/supplier-payments', supplierPaymentRoutes);
+
+//dashboard routes
+app.use('/api/shop', dashboardRoutes);
+app.use('/api/restaurant', restaurantDashboardRoutes);
+
+// routes pour les compagnies de type restaurant 
+app.use('/api/restaurant', restaurantProductRoutes);
+app.use('/api/restaurant', restaurantSaleRoutes);
+app.use('/api/restaurant', restaurantDebtRoutes);
+app.use('/api/restaurant', restaurantPaymentRoutes);
 
 // 404 handler
 app.use((req, res, next) => {

@@ -8,6 +8,8 @@ const {
   updateStock,
   deleteProduct,
   getStockMovements,
+  getProductCompositions,      // ← AJOUTÉ
+  updateProductCompositions,   // ← AJOUTÉ
 } = require("../controllers/product.controller");
 const authenticate = require("../middlewares/auth.middleware");
 const validate = require("../middlewares/validate.middleware");
@@ -113,5 +115,20 @@ router.get("/:id/movements", requireMembership(), getStockMovements);
 
 // DELETE /api/products/:id?company_id=X - Supprimer un produit (owner seulement)
 router.delete("/:id", requireMembership(["owner"]), deleteProduct);
+
+// GET /api/products/:id/compositions?company_id=X - Obtenir les compositions du plat
+router.get(
+  "/:id/compositions",
+  requireMembership(),
+  getProductCompositions
+);
+
+// PUT /api/products/:id/compositions?company_id=X - Mettre à jour les compositions du plat (owner ou manager)
+router.put(
+  "/:id/compositions",
+  requireMembership(["owner", "manager"]),
+  updateProductCompositions
+);
+
 
 module.exports = router;

@@ -102,6 +102,12 @@ const login = async (req, res, next) => {
       [user.id]
     );
 
+    // Vérifier si super_admin
+    const [adminRows] = await pool.query(
+      'SELECT id FROM memberships WHERE user_id = ? AND role = ? AND is_active = 1',
+      [user.id, 'super_admin']
+    );
+
     // Générer le token
     const token = generateToken({
       id: user.id,
@@ -118,6 +124,7 @@ const login = async (req, res, next) => {
           last_name: user.last_name,
           email: user.email,
           phone: user.phone,
+          is_super_admin: adminRows.length > 0,
         },
         token,
       },
@@ -139,11 +146,18 @@ const me = async (req, res, next) => {
       throw new AppError('Utilisateur introuvable.', 404);
     }
 
+    // Récupérer le rôle super_admin si présent
+    const [memberships] = await pool.query(
+      'SELECT role FROM memberships WHERE user_id = ? AND role = ? AND is_active = 1',
+      [req.user.id, 'super_admin']
+    );
+
+    const user = users[0];
+    user.is_super_admin = memberships.length > 0;
+
     res.status(200).json({
       success: true,
-      data: {
-        user: users[0],
-      },
+      data: { user },
     });
   } catch (error) {
     next(error);

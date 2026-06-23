@@ -12,6 +12,7 @@ const requireMembership = (allowedRoles = []) => {
         req.body?.company_id ||
         req.params?.company_id ||
         req.query?.company_id ||
+        req.params?.id ||
         req.params?.companyId;
 
       if (!companyId) {

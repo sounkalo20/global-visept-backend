@@ -22,6 +22,13 @@ const productsUploadDir = path.join(
   'products'
 );
 
+const paymentsUploadDir = path.join(
+  __dirname,
+  '..',
+  'uploads',
+  'payments'
+);
+
 
 // =========================
 // CREATE DIRS IF NOT EXISTS
@@ -33,6 +40,10 @@ if (!fs.existsSync(companiesUploadDir)) {
 
 if (!fs.existsSync(productsUploadDir)) {
   fs.mkdirSync(productsUploadDir, { recursive: true });
+}
+
+if (!fs.existsSync(paymentsUploadDir)) {
+  fs.mkdirSync(paymentsUploadDir, { recursive: true });
 }
 
 
@@ -100,6 +111,21 @@ const productStorage = multer.diskStorage({
   },
 });
 
+// =========================
+// PAYMENT STORAGE
+// =========================
+
+const paymentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, paymentsUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, `payment-${uniqueSuffix}${ext}`);
+  },
+});
+
 
 // =========================
 // MULTER INSTANCES
@@ -121,8 +147,22 @@ const uploadProduct = multer({
   },
 });
 
+const uploadPayment = multer({
+  storage: paymentStorage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'application/pdf'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new AppError('Format non supporté. Utilisez PNG, JPG, WEBP ou PDF.', 400), false);
+    }
+  },
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo pour les preuves
+});
+
 
 module.exports = {
   uploadCompany,
   uploadProduct,
+  uploadPayment,
 };

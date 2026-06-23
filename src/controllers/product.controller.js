@@ -3,6 +3,7 @@ const AppError = require("../utils/AppError");
 
 // ─── CRÉER UN PRODUIT ───────────────────────────────────
 const createProduct = async (req, res, next) => {
+  const connection = await pool.getConnection();
   try {
     const {
       name,
@@ -21,73 +22,78 @@ const createProduct = async (req, res, next) => {
       is_available,
       category_id,
       unit_id,
+      product_type = 'product',
+      compositions,
     } = req.body;
 
     const companyId = req.company.id;
+
+    // Valider le type de produit
+    const allowedTypes = ['product', 'service', 'dish', 'ingredient', 'raw_material'];
+    if (!allowedTypes.includes(product_type)) {
+      throw new AppError('Type de produit invalide. Types autorisés : ' + allowedTypes.join(', '), 400);
+    }
 
     // Générer le slug
     const slug =
       name
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "") +
-      "-" +
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') +
+      '-' +
       Date.now();
 
     // Vérifier l'unicité du nom pour cette entreprise
-    const [existing] = await pool.query(
-      "SELECT id FROM products WHERE company_id = ? AND name = ? AND deleted_at IS NULL",
-      [companyId, name],
+    const [existing] = await connection.query(
+      'SELECT id FROM products WHERE company_id = ? AND name = ? AND deleted_at IS NULL',
+      [companyId, name]
     );
 
     if (existing.length > 0) {
-      throw new AppError(
-        "Un produit avec ce nom existe déjà dans votre entreprise.",
-        409,
-      );
+      throw new AppError('Un produit avec ce nom existe déjà dans votre entreprise.', 409);
     }
 
     // Vérifier l'unicité du barcode si fourni
     if (barcode) {
-      const [existingBarcode] = await pool.query(
-        "SELECT id FROM products WHERE company_id = ? AND barcode = ? AND deleted_at IS NULL",
-        [companyId, barcode],
+      const [existingBarcode] = await connection.query(
+        'SELECT id FROM products WHERE company_id = ? AND barcode = ? AND deleted_at IS NULL',
+        [companyId, barcode]
       );
 
       if (existingBarcode.length > 0) {
-        throw new AppError("Un produit avec ce code-barres existe déjà.", 409);
+        throw new AppError('Un produit avec ce code-barres existe déjà.', 409);
       }
     }
 
     // Vérifier l'unicité du SKU si fourni
     if (sku) {
-      const [existingSku] = await pool.query(
-        "SELECT id FROM products WHERE company_id = ? AND sku = ? AND deleted_at IS NULL",
-        [companyId, sku],
+      const [existingSku] = await connection.query(
+        'SELECT id FROM products WHERE company_id = ? AND sku = ? AND deleted_at IS NULL',
+        [companyId, sku]
       );
 
       if (existingSku.length > 0) {
-        throw new AppError("Un produit avec ce SKU existe déjà.", 409);
+        throw new AppError('Un produit avec ce SKU existe déjà.', 409);
       }
     }
 
     // Vérifier que la catégorie existe et appartient à la même entreprise
     if (category_id) {
-      const [categories] = await pool.query(
-        "SELECT id FROM categories WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
-        [category_id, companyId],
+      const [categories] = await connection.query(
+        'SELECT id FROM categories WHERE id = ? AND company_id = ? AND deleted_at IS NULL',
+        [category_id, companyId]
       );
 
       if (categories.length === 0) {
-        throw new AppError("La catégorie spécifiée est introuvable.", 404);
+        throw new AppError('La catégorie spécifiée est introuvable.', 404);
       }
     }
 
     // Vérifier que l'unité existe
     if (unit_id) {
-      const [units] = await pool.query(
-        "SELECT id FROM measurement_units WHERE id = ?",
-        [unit_id],
+      const [units] = await connection.query(
+        'SELECT id FROM measurement_units WHERE id = ?',
+        [unit_id]
       );
 
       if (units.length === 0) {
@@ -95,20 +101,52 @@ const createProduct = async (req, res, next) => {
       }
     }
 
+    // Vérifier les ingrédients si compositions fournies
+    if (product_type === 'dish' && compositions && Array.isArray(compositions) && compositions.length > 0) {
+      for (const comp of compositions) {
+        // Vérifier que l'ingrédient existe
+        const [ingredients] = await connection.query(
+          "SELECT id FROM products WHERE id = ? AND company_id = ? AND product_type = 'ingredient' AND deleted_at IS NULL",
+          [comp.ingredient_id, companyId]
+        );
+
+        if (ingredients.length === 0) {
+          throw new AppError(
+            `L'ingrédient #${comp.ingredient_id} est introuvable ou n'est pas un ingrédient.`,
+            404
+          );
+        }
+
+        // Vérifier l'unité
+        if (comp.unit_id) {
+          const [units] = await connection.query(
+            'SELECT id FROM measurement_units WHERE id = ?',
+            [comp.unit_id]
+          );
+
+          if (units.length === 0) {
+            throw new AppError(`L'unité #${comp.unit_id} est introuvable.`, 404);
+          }
+        }
+      }
+    }
+
     // URL de l'image si uploadée
     let imageUrl = null;
     if (req.file) {
-      imageUrl = `${req.protocol}://${req.get("host")}/uploads/products/${req.file.filename}`;
+      imageUrl = `${req.protocol}://${req.get('host')}/uploads/products/${req.file.filename}`;
     }
 
+    await connection.beginTransaction();
+
     // Insérer le produit
-    const [result] = await pool.query(
+    const [result] = await connection.query(
       `INSERT INTO products (
         company_id, category_id, unit_id, name, slug, description,
         barcode, sku, cost_price, retail_price, wholesale_price,
-        wholesale_min_qty, allow_custom_price, manage_stock,
+        wholesale_min_qty, allow_custom_price, product_type, manage_stock,
         current_stock, low_stock_threshold, is_active, is_available, image_url
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         companyId,
         category_id || null,
@@ -118,39 +156,85 @@ const createProduct = async (req, res, next) => {
         description || null,
         barcode || null,
         sku || null,
-        cost_price || 0,
-        retail_price || 0,
-        wholesale_price || 0,
-        wholesale_min_qty || 1,
-        allow_custom_price || false,
-        manage_stock !== undefined ? manage_stock : true,
-        current_stock || 0,
-        low_stock_threshold || 10,
-        is_active !== undefined ? is_active : true,
-        is_available !== undefined ? is_available : true,
+        parseFloat(cost_price) || 0,
+        parseFloat(retail_price) || 0,
+        parseFloat(wholesale_price) || 0,
+        parseInt(wholesale_min_qty) || 1,
+        allow_custom_price === 'true' || allow_custom_price === true || allow_custom_price === 1 ? 1 : 0,
+        product_type,
+        manage_stock === 'false' || manage_stock === false || manage_stock === 0 ? 0 : 1,
+        parseFloat(current_stock) || 0,
+        parseFloat(low_stock_threshold) || 10,
+        is_active === 'false' || is_active === false || is_active === 0 ? 0 : 1,
+        is_available === 'false' || is_available === false || is_available === 0 ? 0 : 1,
         imageUrl,
-      ],
+      ]
     );
 
+    const productId = result.insertId;
+
+    // Insérer les compositions si c'est un plat
+    if (product_type === 'dish' && compositions && Array.isArray(compositions) && compositions.length > 0) {
+      for (const comp of compositions) {
+        await connection.query(
+          `INSERT INTO product_compositions (
+            parent_product_id, ingredient_id, quantity_used, unit_id, is_optional
+          ) VALUES (?, ?, ?, ?, ?)`,
+          [
+            productId,
+            comp.ingredient_id,
+            parseFloat(comp.quantity_used) || 0,
+            comp.unit_id || 1,
+            comp.is_optional === 'true' || comp.is_optional === true || comp.is_optional === 1 ? 1 : 0,
+          ]
+        );
+      }
+    }
+
+    await connection.commit();
+
     // Récupérer le produit créé avec sa catégorie et unité
-    const [products] = await pool.query(
-      `SELECT p.*, c.name as category_name, u.name as unit_name, u.symbol as unit_symbol
+    const [products] = await connection.query(
+      `SELECT p.*, 
+              c.name as category_name, 
+              u.name as unit_name, 
+              u.symbol as unit_symbol
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.id
        LEFT JOIN measurement_units u ON p.unit_id = u.id
        WHERE p.id = ?`,
-      [result.insertId],
+      [productId]
     );
+
+    // Récupérer les compositions si plat
+    let productCompositions = [];
+    if (product_type === 'dish') {
+      const [comps] = await connection.query(
+        `SELECT pc.*, p.name as ingredient_name, mu.name as unit_name, mu.symbol as unit_symbol
+         FROM product_compositions pc
+         JOIN products p ON pc.ingredient_id = p.id
+         JOIN measurement_units mu ON pc.unit_id = mu.id
+         WHERE pc.parent_product_id = ?`,
+        [productId]
+      );
+      productCompositions = comps;
+    }
 
     res.status(201).json({
       success: true,
-      message: "Produit créé avec succès.",
+      message: 'Produit créé avec succès.',
       data: {
-        product: products[0],
+        product: {
+          ...products[0],
+          compositions: productCompositions,
+        },
       },
     });
   } catch (error) {
+    await connection.rollback();
     next(error);
+  } finally {
+    connection.release();
   }
 };
 
@@ -160,6 +244,7 @@ const getProducts = async (req, res, next) => {
     const companyId = req.company.id;
     const {
       category_id,
+      type = '',
       search,
       is_active,
       is_available,
@@ -211,6 +296,15 @@ const getProducts = async (req, res, next) => {
         " AND p.manage_stock = 1 AND p.current_stock <= p.low_stock_threshold";
     }
 
+    // Filtre par type de produit
+    if (type) {
+      const allowedTypes = ['product', 'service', 'dish', 'ingredient'];
+      if (allowedTypes.includes(type)) {
+        query += ' AND p.product_type = ?';
+        queryParams.push(type);
+      }
+    }
+
     // Compter le total avant pagination
     const countQuery = query.replace(
       "SELECT p.*, c.name as category_name, u.name as unit_name, u.symbol as unit_symbol",
@@ -256,6 +350,8 @@ const getProducts = async (req, res, next) => {
   }
 };
 
+
+
 // ─── DÉTAILS D'UN PRODUIT ───────────────────────────────
 const getProductById = async (req, res, next) => {
   try {
@@ -272,21 +368,43 @@ const getProductById = async (req, res, next) => {
     );
 
     if (products.length === 0) {
-      throw new AppError("Produit introuvable.", 404);
+      throw new AppError('Produit introuvable.', 404);
     }
+
+    const product = products[0];
 
     // Récupérer les variantes
     const [variants] = await pool.query(
-      "SELECT * FROM product_variants WHERE product_id = ?",
+      'SELECT * FROM product_variants WHERE product_id = ?',
       [id],
     );
+
+    // Récupérer les compositions si c'est un plat
+    let compositions = [];
+    if (product.product_type === 'dish') {
+      const [comps] = await pool.query(
+        `SELECT pc.*, 
+                p.name as ingredient_name, 
+                p.current_stock as ingredient_stock,
+                p.retail_price as ingredient_price,
+                mu.name as unit_name, 
+                mu.symbol as unit_symbol
+         FROM product_compositions pc
+         JOIN products p ON pc.ingredient_id = p.id
+         JOIN measurement_units mu ON pc.unit_id = mu.id
+         WHERE pc.parent_product_id = ?`,
+        [id]
+      );
+      compositions = comps;
+    }
 
     res.status(200).json({
       success: true,
       data: {
         product: {
-          ...products[0],
+          ...product,
           variants: variants || [],
+          compositions: compositions,
         },
       },
     });
@@ -295,8 +413,11 @@ const getProductById = async (req, res, next) => {
   }
 };
 
+// controllers/product.controller.js (REMPLACER updateProduct)
+
 // ─── MODIFIER UN PRODUIT ────────────────────────────────
 const updateProduct = async (req, res, next) => {
+  const connection = await pool.getConnection();
   try {
     const { id } = req.params;
     const companyId = req.company.id;
@@ -310,6 +431,7 @@ const updateProduct = async (req, res, next) => {
       wholesale_price,
       wholesale_min_qty,
       allow_custom_price,
+      product_type,
       manage_stock,
       current_stock,
       low_stock_threshold,
@@ -317,74 +439,83 @@ const updateProduct = async (req, res, next) => {
       is_available,
       category_id,
       unit_id,
+      compositions,
     } = req.body;
 
     // Vérifier que le produit existe et appartient à l'entreprise
-    const [products] = await pool.query(
-      "SELECT * FROM products WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
+    const [products] = await connection.query(
+      'SELECT * FROM products WHERE id = ? AND company_id = ? AND deleted_at IS NULL',
       [id, companyId],
     );
 
     if (products.length === 0) {
-      throw new AppError("Produit introuvable.", 404);
+      throw new AppError('Produit introuvable.', 404);
     }
 
     const product = products[0];
 
     // Vérifier l'unicité du nom si modifié
     if (name && name !== product.name) {
-      const [existing] = await pool.query(
-        "SELECT id FROM products WHERE company_id = ? AND name = ? AND id != ? AND deleted_at IS NULL",
+      const [existing] = await connection.query(
+        'SELECT id FROM products WHERE company_id = ? AND name = ? AND id != ? AND deleted_at IS NULL',
         [companyId, name, id],
       );
 
       if (existing.length > 0) {
-        throw new AppError("Un produit avec ce nom existe déjà.", 409);
+        throw new AppError('Un produit avec ce nom existe déjà.', 409);
       }
     }
 
     // Vérifier l'unicité du barcode si modifié
     if (barcode && barcode !== product.barcode) {
-      const [existingBarcode] = await pool.query(
-        "SELECT id FROM products WHERE company_id = ? AND barcode = ? AND id != ? AND deleted_at IS NULL",
+      const [existingBarcode] = await connection.query(
+        'SELECT id FROM products WHERE company_id = ? AND barcode = ? AND id != ? AND deleted_at IS NULL',
         [companyId, barcode, id],
       );
 
       if (existingBarcode.length > 0) {
-        throw new AppError("Un produit avec ce code-barres existe déjà.", 409);
+        throw new AppError('Un produit avec ce code-barres existe déjà.', 409);
       }
     }
 
     // Vérifier l'unicité du SKU si modifié
     if (sku && sku !== product.sku) {
-      const [existingSku] = await pool.query(
-        "SELECT id FROM products WHERE company_id = ? AND sku = ? AND id != ? AND deleted_at IS NULL",
+      const [existingSku] = await connection.query(
+        'SELECT id FROM products WHERE company_id = ? AND sku = ? AND id != ? AND deleted_at IS NULL',
         [companyId, sku, id],
       );
 
       if (existingSku.length > 0) {
-        throw new AppError("Un produit avec ce SKU existe déjà.", 409);
+        throw new AppError('Un produit avec ce SKU existe déjà.', 409);
+      }
+    }
+
+    // Valider le type de produit si modifié
+    if (product_type) {
+      const allowedTypes = ['product', 'service', 'dish', 'ingredient', 'raw_material'];
+      if (!allowedTypes.includes(product_type)) {
+        throw new AppError('Type de produit invalide.', 400);
       }
     }
 
     // Vérifier la catégorie si modifiée
     if (category_id !== undefined) {
       if (category_id !== null) {
-        const [categories] = await pool.query(
-          "SELECT id FROM categories WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
+        const [categories] = await connection.query(
+          'SELECT id FROM categories WHERE id = ? AND company_id = ? AND deleted_at IS NULL',
           [category_id, companyId],
         );
 
         if (categories.length === 0) {
-          throw new AppError("La catégorie spécifiée est introuvable.", 404);
+          throw new AppError('La catégorie spécifiée est introuvable.', 404);
         }
       }
     }
 
     // Vérifier l'unité si modifiée
     if (unit_id) {
-      const [units] = await pool.query(
-        "SELECT id FROM measurement_units WHERE id = ?",
+      const [units] = await connection.query(
+        'SELECT id FROM measurement_units WHERE id = ?',
         [unit_id],
       );
 
@@ -393,10 +524,31 @@ const updateProduct = async (req, res, next) => {
       }
     }
 
+    // Vérifier les ingrédients si compositions fournies
+    if ((product_type || product.product_type) === 'dish' && compositions && Array.isArray(compositions)) {
+      for (const comp of compositions) {
+        if (comp.ingredient_id) {
+          const [ingredients] = await connection.query(
+            "SELECT id FROM products WHERE id = ? AND company_id = ? AND product_type = 'ingredient' AND deleted_at IS NULL",
+            [comp.ingredient_id, companyId],
+          );
+
+          if (ingredients.length === 0) {
+            throw new AppError(
+              `L'ingrédient #${comp.ingredient_id} est introuvable ou n'est pas un ingrédient.`,
+              404,
+            );
+          }
+        }
+      }
+    }
+
+    await connection.beginTransaction();
+
     // URL de l'image si uploadée
     let imageUrl = product.image_url;
     if (req.file) {
-      imageUrl = `${req.protocol}://${req.get("host")}/uploads/products/${req.file.filename}`;
+      imageUrl = `${req.protocol}://${req.get('host')}/uploads/products/${req.file.filename}`;
     }
 
     // Construire la requête de mise à jour
@@ -407,107 +559,149 @@ const updateProduct = async (req, res, next) => {
       const slug =
         name
           .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, "") +
-        "-" +
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '') +
+        '-' +
         Date.now();
-      updateFields.push("name = ?", "slug = ?");
+      updateFields.push('name = ?', 'slug = ?');
       updateValues.push(name, slug);
     }
 
     if (description !== undefined) {
-      updateFields.push("description = ?");
-      updateValues.push(description);
+      updateFields.push('description = ?');
+      updateValues.push(description || null);
     }
 
     if (barcode !== undefined) {
-      updateFields.push("barcode = ?");
-      updateValues.push(barcode);
+      updateFields.push('barcode = ?');
+      updateValues.push(barcode || null);
     }
 
     if (sku !== undefined) {
-      updateFields.push("sku = ?");
-      updateValues.push(sku);
+      updateFields.push('sku = ?');
+      updateValues.push(sku || null);
     }
 
     if (cost_price !== undefined) {
-      updateFields.push("cost_price = ?");
-      updateValues.push(cost_price);
+      updateFields.push('cost_price = ?');
+      updateValues.push(parseFloat(cost_price) || 0);
     }
 
     if (retail_price !== undefined) {
-      updateFields.push("retail_price = ?");
-      updateValues.push(retail_price);
+      updateFields.push('retail_price = ?');
+      updateValues.push(parseFloat(retail_price) || 0);
     }
 
     if (wholesale_price !== undefined) {
-      updateFields.push("wholesale_price = ?");
-      updateValues.push(wholesale_price);
+      updateFields.push('wholesale_price = ?');
+      updateValues.push(parseFloat(wholesale_price) || 0);
     }
 
     if (wholesale_min_qty !== undefined) {
-      updateFields.push("wholesale_min_qty = ?");
-      updateValues.push(wholesale_min_qty);
+      updateFields.push('wholesale_min_qty = ?');
+      updateValues.push(parseInt(wholesale_min_qty) || 1);
     }
 
     if (allow_custom_price !== undefined) {
-      updateFields.push("allow_custom_price = ?");
-      updateValues.push(allow_custom_price);
+      updateFields.push('allow_custom_price = ?');
+      updateValues.push(
+        allow_custom_price === 'true' || allow_custom_price === true || allow_custom_price === 1 ? 1 : 0
+      );
+    }
+
+    if (product_type !== undefined) {
+      updateFields.push('product_type = ?');
+      updateValues.push(product_type);
     }
 
     if (manage_stock !== undefined) {
-      updateFields.push("manage_stock = ?");
-      updateValues.push(manage_stock);
+      updateFields.push('manage_stock = ?');
+      updateValues.push(
+        manage_stock === 'false' || manage_stock === false || manage_stock === 0 ? 0 : 1
+      );
     }
 
     if (current_stock !== undefined) {
-      updateFields.push("current_stock = ?");
-      updateValues.push(current_stock);
+      updateFields.push('current_stock = ?');
+      updateValues.push(parseFloat(current_stock) || 0);
     }
 
     if (low_stock_threshold !== undefined) {
-      updateFields.push("low_stock_threshold = ?");
-      updateValues.push(low_stock_threshold);
+      updateFields.push('low_stock_threshold = ?');
+      updateValues.push(parseFloat(low_stock_threshold) || 10);
     }
 
     if (is_active !== undefined) {
-      updateFields.push("is_active = ?");
-      updateValues.push(is_active);
+      updateFields.push('is_active = ?');
+      updateValues.push(
+        is_active === 'false' || is_active === false || is_active === 0 ? 0 : 1
+      );
     }
 
     if (is_available !== undefined) {
-      updateFields.push("is_available = ?");
-      updateValues.push(is_available);
+      updateFields.push('is_available = ?');
+      updateValues.push(
+        is_available === 'false' || is_available === false || is_available === 0 ? 0 : 1
+      );
     }
 
     if (category_id !== undefined) {
-      updateFields.push("category_id = ?");
-      updateValues.push(category_id);
+      updateFields.push('category_id = ?');
+      updateValues.push(category_id || null);
     }
 
     if (unit_id !== undefined) {
-      updateFields.push("unit_id = ?");
-      updateValues.push(unit_id);
+      updateFields.push('unit_id = ?');
+      updateValues.push(unit_id || 1);
     }
 
     if (imageUrl !== product.image_url) {
-      updateFields.push("image_url = ?");
+      updateFields.push('image_url = ?');
       updateValues.push(imageUrl);
     }
 
-    if (updateFields.length === 0) {
-      throw new AppError("Aucun champ à mettre à jour.", 400);
+    if (updateFields.length > 0) {
+      updateValues.push(id);
+      await connection.query(
+        `UPDATE products SET ${updateFields.join(', ')} WHERE id = ?`,
+        updateValues,
+      );
     }
 
-    updateValues.push(id);
+    // Mettre à jour les compositions si fournies
+    const finalProductType = product_type || product.product_type;
+    if (finalProductType === 'dish' && compositions !== undefined) {
+      // Supprimer les anciennes
+      await connection.query(
+        'DELETE FROM product_compositions WHERE parent_product_id = ?',
+        [id]
+      );
 
-    await pool.query(
-      `UPDATE products SET ${updateFields.join(", ")} WHERE id = ?`,
-      updateValues,
-    );
+      // Insérer les nouvelles
+      if (Array.isArray(compositions)) {
+        for (const comp of compositions) {
+          if (comp.ingredient_id) {
+            await connection.query(
+              `INSERT INTO product_compositions (
+                parent_product_id, ingredient_id, quantity_used, unit_id, is_optional
+              ) VALUES (?, ?, ?, ?, ?)`,
+              [
+                id,
+                comp.ingredient_id,
+                parseFloat(comp.quantity_used) || 0,
+                comp.unit_id || 1,
+                comp.is_optional === 'true' || comp.is_optional === true || comp.is_optional === 1 ? 1 : 0,
+              ]
+            );
+          }
+        }
+      }
+    }
+
+    await connection.commit();
 
     // Récupérer le produit mis à jour
-    const [updatedProducts] = await pool.query(
+    const [updatedProducts] = await connection.query(
       `SELECT p.*, c.name as category_name, u.name as unit_name, u.symbol as unit_symbol
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.id
@@ -516,15 +710,35 @@ const updateProduct = async (req, res, next) => {
       [id],
     );
 
+    // Récupérer les compositions
+    let productCompositions = [];
+    if (updatedProducts[0].product_type === 'dish') {
+      const [comps] = await connection.query(
+        `SELECT pc.*, p.name as ingredient_name, mu.name as unit_name, mu.symbol as unit_symbol
+         FROM product_compositions pc
+         JOIN products p ON pc.ingredient_id = p.id
+         JOIN measurement_units mu ON pc.unit_id = mu.id
+         WHERE pc.parent_product_id = ?`,
+        [id]
+      );
+      productCompositions = comps;
+    }
+
     res.status(200).json({
       success: true,
-      message: "Produit mis à jour avec succès.",
+      message: 'Produit mis à jour avec succès.',
       data: {
-        product: updatedProducts[0],
+        product: {
+          ...updatedProducts[0],
+          compositions: productCompositions,
+        },
       },
     });
   } catch (error) {
+    await connection.rollback();
     next(error);
+  } finally {
+    connection.release();
   }
 };
 
@@ -716,6 +930,154 @@ const getStockMovements = async (req, res, next) => {
   }
 };
 
+// ─── RÉCUPÉRER LES COMPOSITIONS D'UN PLAT ──────────────
+const getProductCompositions = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const companyId = req.company.id;
+
+    // Vérifier que le produit existe et est un plat
+    const [products] = await pool.query(
+      "SELECT id, name, product_type FROM products WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
+      [id, companyId]
+    );
+
+    if (products.length === 0) {
+      throw new AppError('Produit introuvable.', 404);
+    }
+
+    if (products[0].product_type !== 'dish') {
+      throw new AppError("Ce produit n'est pas un plat.", 400);
+    }
+
+    // Récupérer les compositions
+    const [compositions] = await pool.query(
+      `SELECT pc.*, 
+              p.name as ingredient_name, 
+              p.current_stock as ingredient_stock,
+              p.retail_price as ingredient_price,
+              mu.name as unit_name, 
+              mu.symbol as unit_symbol
+       FROM product_compositions pc
+       JOIN products p ON pc.ingredient_id = p.id
+       JOIN measurement_units mu ON pc.unit_id = mu.id
+       WHERE pc.parent_product_id = ?`,
+      [id]
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        product: products[0],
+        compositions,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── METTRE À JOUR LES COMPOSITIONS D'UN PLAT ──────────
+const updateProductCompositions = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  try {
+    const { id } = req.params;
+    const companyId = req.company.id;
+    const { compositions } = req.body; // [{ ingredient_id, quantity_used, unit_id, is_optional }]
+
+    // Vérifier que le produit existe et est un plat
+    const [products] = await connection.query(
+      "SELECT id, name, product_type FROM products WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
+      [id, companyId]
+    );
+
+    if (products.length === 0) {
+      throw new AppError('Produit introuvable.', 404);
+    }
+
+    if (products[0].product_type !== 'dish') {
+      throw new AppError("Les compositions ne sont disponibles que pour les plats.", 400);
+    }
+
+    if (!compositions || !Array.isArray(compositions)) {
+      throw new AppError('Le champ compositions (tableau) est requis.', 400);
+    }
+
+    await connection.beginTransaction();
+
+    // Supprimer les anciennes compositions
+    await connection.query(
+      'DELETE FROM product_compositions WHERE parent_product_id = ?',
+      [id]
+    );
+
+    // Insérer les nouvelles compositions
+    for (const comp of compositions) {
+      // Vérifier que l'ingrédient existe et appartient à la même entreprise
+      const [ingredients] = await connection.query(
+        "SELECT id, product_type FROM products WHERE id = ? AND company_id = ? AND product_type = 'ingredient' AND deleted_at IS NULL",
+        [comp.ingredient_id, companyId]
+      );
+
+      if (ingredients.length === 0) {
+        throw new AppError(
+          `L'ingrédient #${comp.ingredient_id} est introuvable ou n'est pas un ingrédient.`,
+          404
+        );
+      }
+
+      // Vérifier l'unité
+      const [units] = await connection.query(
+        'SELECT id FROM measurement_units WHERE id = ?',
+        [comp.unit_id || 1]
+      );
+
+      if (units.length === 0) {
+        throw new AppError(`L'unité #${comp.unit_id} est introuvable.`, 404);
+      }
+
+      await connection.query(
+        `INSERT INTO product_compositions (
+          parent_product_id, ingredient_id, quantity_used, unit_id, is_optional
+        ) VALUES (?, ?, ?, ?, ?)`,
+        [
+          id,
+          comp.ingredient_id,
+          comp.quantity_used || 0,
+          comp.unit_id || 1,
+          comp.is_optional || false,
+        ]
+      );
+    }
+
+    await connection.commit();
+
+    // Récupérer les compositions mises à jour
+    const [updatedCompositions] = await connection.query(
+      `SELECT pc.*, p.name as ingredient_name, mu.name as unit_name, mu.symbol as unit_symbol
+       FROM product_compositions pc
+       JOIN products p ON pc.ingredient_id = p.id
+       JOIN measurement_units mu ON pc.unit_id = mu.id
+       WHERE pc.parent_product_id = ?`,
+      [id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Compositions mises à jour avec succès.',
+      data: {
+        compositions: updatedCompositions,
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+};
+
+
 module.exports = {
   createProduct,
   getProducts,
@@ -724,4 +1086,6 @@ module.exports = {
   updateStock,
   deleteProduct,
   getStockMovements,
+  getProductCompositions,
+  updateProductCompositions,
 };
