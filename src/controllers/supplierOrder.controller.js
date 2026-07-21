@@ -617,7 +617,7 @@ const receiveItems = async (req, res, next) => {
     try {
         const { id } = req.params;
         const companyId = req.company.id;
-        const { items } = req.body;
+        const { items, destination_type = 'shop', warehouse_id } = req.body;
 
         const [orders] = await connection.query(
             'SELECT * FROM supplier_orders WHERE id = ? AND company_id = ?',
@@ -668,18 +668,111 @@ const receiveItems = async (req, res, next) => {
                 [newQtyReceived, received.item_id]
             );
 
-            // Mettre à jour le stock du produit
-            if (orderItem.variant_id) {
+            // Mettre à jour le prix de revient dans tous les cas
+            await connection.query(
+                'UPDATE products SET cost_price = ? WHERE id = ?',
+                [orderItem.unit_cost, orderItem.product_id]
+            );
+
+            if (destination_type === 'warehouse') {
+                if (!warehouse_id) throw new AppError("L'ID de l'entrepôt est requis.", 400);
+
+                // Récupérer le produit et son catalog_product_id
+                const [prodRows] = await connection.query('SELECT name, description, barcode, image_url, unit_id, catalog_product_id FROM products WHERE id = ?', [orderItem.product_id]);
+                if (prodRows.length === 0) throw new AppError("Produit introuvable.", 404);
+                let catalogProductId = prodRows[0].catalog_product_id;
+
+                // S'il n'est pas lié, on le lie à la volée
+                if (!catalogProductId) {
+                    const [ownerRows] = await connection.query("SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1", [companyId]);
+                    if (ownerRows.length > 0) {
+                        const ProductCatalogService = require("../services/ProductCatalogService");
+                        const catalogProduct = await ProductCatalogService.findOrCreateCatalogProduct(ownerRows[0].user_id, {
+                            name: prodRows[0].name,
+                            barcode: prodRows[0].barcode,
+                            description: prodRows[0].description,
+                            image_url: prodRows[0].image_url,
+                            unit_id: prodRows[0].unit_id
+                        }, connection);
+                        
+                        catalogProductId = catalogProduct.id;
+                        await connection.query('UPDATE products SET catalog_product_id = ? WHERE id = ?', [catalogProductId, orderItem.product_id]);
+                    } else {
+                        throw new AppError("Impossible d'identifier le propriétaire pour le catalogue.", 500);
+                    }
+                }
+                
+                // Mettre à jour le stock entrepôt
+                const [ws] = await connection.query(
+                    'SELECT id, quantity FROM warehouse_stocks WHERE warehouse_id = ? AND catalog_product_id = ?',
+                    [warehouse_id, catalogProductId]
+                );
+
+                let stockBefore = 0;
+                let stockAfter = received.quantity_received;
+
+                if (ws.length > 0) {
+                    stockBefore = parseFloat(ws[0].quantity);
+                    stockAfter = stockBefore + parseFloat(received.quantity_received);
+                    await connection.query(
+                        'UPDATE warehouse_stocks SET quantity = ? WHERE id = ?',
+                        [stockAfter, ws[0].id]
+                    );
+                } else {
+                    await connection.query(
+                        'INSERT INTO warehouse_stocks (warehouse_id, catalog_product_id, quantity) VALUES (?, ?, ?)',
+                        [warehouse_id, catalogProductId, received.quantity_received]
+                    );
+                }
+
+                // Ajouter le log dans warehouse_movements
                 await connection.query(
-                    'UPDATE product_variants SET current_stock = current_stock + ? WHERE id = ?',
-                    [received.quantity_received, orderItem.variant_id]
+                    `INSERT INTO warehouse_movements 
+                     (warehouse_id, catalog_product_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, performed_by)
+                     VALUES (?, ?, 'in_from_supplier', ?, ?, ?, 'supplier_order', ?, ?)`,
+                    [warehouse_id, catalogProductId, received.quantity_received, stockBefore, stockAfter, id, req.user.id]
+                );
+            } else {
+                // Mettre à jour le stock boutique
+                if (orderItem.variant_id) {
+                    await connection.query(
+                        'UPDATE product_variants SET current_stock = current_stock + ? WHERE id = ?',
+                        [received.quantity_received, orderItem.variant_id]
+                    );
+                }
+
+                // Récupérer le stock_before pour products
+                const [productRows] = await connection.query(
+                    'SELECT current_stock FROM products WHERE id = ?',
+                    [orderItem.product_id]
+                );
+                const stockBefore = parseFloat(productRows[0].current_stock);
+                const stockAfter = stockBefore + parseFloat(received.quantity_received);
+
+                await connection.query(
+                    'UPDATE products SET current_stock = ? WHERE id = ?',
+                    [stockAfter, orderItem.product_id]
+                );
+
+                await connection.query(
+                    `INSERT INTO inventory_movements (
+                      company_id, product_id, variant_id, movement_type,
+                      quantity, stock_before, stock_after,
+                      reference_type, reference_id, unit_cost, performed_by
+                    ) VALUES (?, ?, ?, 'purchase', ?, ?, ?, 'supplier_order', ?, ?, ?)`,
+                    [
+                        companyId,
+                        orderItem.product_id,
+                        orderItem.variant_id,
+                        received.quantity_received,
+                        stockBefore,
+                        stockAfter,
+                        id,
+                        orderItem.unit_cost,
+                        req.user.id,
+                    ]
                 );
             }
-
-            await connection.query(
-                'UPDATE products SET current_stock = current_stock + ?, cost_price = ? WHERE id = ?',
-                [received.quantity_received, orderItem.unit_cost, orderItem.product_id]
-            );
 
             // Vérifier si cet article est complètement reçu
             const [updatedItem] = await connection.query(
@@ -714,38 +807,6 @@ const receiveItems = async (req, res, next) => {
             'UPDATE supplier_orders SET status = ?, received_at = IF(? = "received", NOW(), received_at) WHERE id = ?',
             [newStatus, newStatus, id]
         );
-
-        // Créer un mouvement d'inventaire pour chaque article reçu
-        for (const received of items) {
-            const [orderItem] = await connection.query(
-                'SELECT * FROM supplier_order_items WHERE id = ?',
-                [received.item_id]
-            );
-
-            const [product] = await connection.query(
-                'SELECT current_stock FROM products WHERE id = ?',
-                [orderItem[0].product_id]
-            );
-
-            await connection.query(
-                `INSERT INTO inventory_movements (
-          company_id, product_id, variant_id, movement_type,
-          quantity, stock_before, stock_after,
-          reference_type, reference_id, unit_cost, performed_by
-        ) VALUES (?, ?, ?, 'purchase', ?, ?, ?, 'supplier_order', ?, ?, ?)`,
-                [
-                    companyId,
-                    orderItem[0].product_id,
-                    orderItem[0].variant_id,
-                    received.quantity_received,
-                    parseFloat(product[0].current_stock) - parseFloat(received.quantity_received),
-                    product[0].current_stock,
-                    id,
-                    orderItem[0].unit_cost,
-                    req.user.id,
-                ]
-            );
-        }
 
         await connection.commit();
 

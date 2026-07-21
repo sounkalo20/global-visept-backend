@@ -19,6 +19,7 @@ const superAdminRoutes = require('./routes/superAdmin.routes');
 const supplierRoutes = require('./routes/supplier.routes');
 const supplierOrderRoutes = require('./routes/supplierOrder.routes')
 const supplierPaymentRoutes = require('./routes/supplierPayment.routes');
+const warehouseRoutes = require('./routes/warehouse.routes');
 
 //routes pour les compagnies de type restaurant 
 const restaurantProductRoutes = require('./routes/restaurant/product.routes');
@@ -59,6 +60,7 @@ app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/supplier-orders', supplierOrderRoutes);
 app.use('/api/supplier-payments', supplierPaymentRoutes);
+app.use('/api/warehouses', warehouseRoutes);
 
 //dashboard routes
 app.use('/api/shop', dashboardRoutes);

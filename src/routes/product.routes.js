@@ -32,9 +32,11 @@ router.post(
     // Parser les champs numériques et booléens du form-data
     if (req.body.company_id)
       req.body.company_id = parseInt(req.body.company_id);
-    if (req.body.category_id)
-      req.body.category_id =
-        req.body.category_id === "null" ? null : parseInt(req.body.category_id);
+    if (req.body.category_id === "" || req.body.category_id === "null") {
+      req.body.category_id = null;
+    } else if (req.body.category_id) {
+      req.body.category_id = parseInt(req.body.category_id);
+    }
     if (req.body.unit_id) req.body.unit_id = parseInt(req.body.unit_id);
     if (req.body.cost_price)
       req.body.cost_price = parseFloat(req.body.cost_price);
@@ -74,9 +76,11 @@ router.put(
   (req, res, next) => {
     if (req.body.company_id)
       req.body.company_id = parseInt(req.body.company_id);
-    if (req.body.category_id)
-      req.body.category_id =
-        req.body.category_id === "null" ? null : parseInt(req.body.category_id);
+    if (req.body.category_id === "" || req.body.category_id === "null") {
+      req.body.category_id = null;
+    } else if (req.body.category_id) {
+      req.body.category_id = parseInt(req.body.category_id);
+    }
     if (req.body.unit_id) req.body.unit_id = parseInt(req.body.unit_id);
     if (req.body.cost_price)
       req.body.cost_price = parseFloat(req.body.cost_price);

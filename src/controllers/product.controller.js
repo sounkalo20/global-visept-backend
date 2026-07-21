@@ -24,6 +24,7 @@ const createProduct = async (req, res, next) => {
       unit_id,
       product_type = 'product',
       compositions,
+      warehouse_stocks,
     } = req.body;
 
     const companyId = req.company.id;
@@ -139,16 +140,29 @@ const createProduct = async (req, res, next) => {
 
     await connection.beginTransaction();
 
+    let catalogProductId = null;
+    if (product_type === 'product' || product_type === 'ingredient' || product_type === 'raw_material') {
+      const [ownerRows] = await connection.query("SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1", [companyId]);
+      if (ownerRows.length > 0) {
+        const ProductCatalogService = require("../services/ProductCatalogService");
+        const catalogProduct = await ProductCatalogService.findOrCreateCatalogProduct(ownerRows[0].user_id, {
+          name, barcode, description, image_url: imageUrl, unit_id: unit_id || 1
+        }, connection);
+        catalogProductId = catalogProduct.id;
+      }
+    }
+
     // Insérer le produit
     const [result] = await connection.query(
       `INSERT INTO products (
-        company_id, category_id, unit_id, name, slug, description,
+        company_id, catalog_product_id, category_id, unit_id, name, slug, description,
         barcode, sku, cost_price, retail_price, wholesale_price,
         wholesale_min_qty, allow_custom_price, product_type, manage_stock,
         current_stock, low_stock_threshold, is_active, is_available, image_url
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         companyId,
+        catalogProductId,
         category_id || null,
         unit_id || 1,
         name,
@@ -188,6 +202,47 @@ const createProduct = async (req, res, next) => {
             comp.is_optional === 'true' || comp.is_optional === true || comp.is_optional === 1 ? 1 : 0,
           ]
         );
+      }
+    }
+
+    // Gérer le stock initial en entrepôt
+    let parsedWarehouseStocks = [];
+    if (warehouse_stocks) {
+      if (typeof warehouse_stocks === 'string') {
+        try {
+          parsedWarehouseStocks = JSON.parse(warehouse_stocks);
+        } catch (e) {
+          // ignore
+        }
+      } else if (Array.isArray(warehouse_stocks)) {
+        parsedWarehouseStocks = warehouse_stocks;
+      }
+    }
+
+    if (parsedWarehouseStocks.length > 0) {
+      const owner_id = req.user.id;
+      for (const stock of parsedWarehouseStocks) {
+        if (stock.quantity && parseFloat(stock.quantity) > 0) {
+          // Vérifier que l'entrepôt appartient au proprio
+          const [warehouses] = await connection.query(
+            `SELECT id FROM warehouses WHERE id = ? AND owner_id = ?`,
+            [stock.warehouse_id, owner_id]
+          );
+
+          if (warehouses.length > 0 && catalogProductId) {
+            await connection.query(
+              `INSERT INTO warehouse_stocks (warehouse_id, catalog_product_id, quantity) VALUES (?, ?, ?)`,
+              [stock.warehouse_id, catalogProductId, parseFloat(stock.quantity)]
+            );
+
+            await connection.query(
+              `INSERT INTO warehouse_movements 
+               (warehouse_id, catalog_product_id, movement_type, quantity, stock_before, stock_after, reference_type, performed_by, notes)
+               VALUES (?, ?, 'in_from_supplier', ?, 0, ?, 'manual', ?, 'Stock initial')`,
+              [stock.warehouse_id, catalogProductId, parseFloat(stock.quantity), parseFloat(stock.quantity), owner_id]
+            );
+          }
+        }
       }
     }
 
@@ -899,9 +954,9 @@ const getStockMovements = async (req, res, next) => {
     const { id } = req.params;
     const companyId = req.company.id;
 
-    // Vérifier que le produit existe
+    // Vérifier que le produit existe et obtenir le catalog_product_id
     const [products] = await pool.query(
-      "SELECT id FROM products WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
+      "SELECT id, catalog_product_id FROM products WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
       [id, companyId],
     );
 
@@ -909,7 +964,10 @@ const getStockMovements = async (req, res, next) => {
       throw new AppError("Produit introuvable.", 404);
     }
 
-    const [movements] = await pool.query(
+    const product = products[0];
+
+    // Mouvements boutique (achats directs, ventes, ajustements...)
+    const [boutiqueMovements] = await pool.query(
       `SELECT im.*, u.first_name as performed_by_name
        FROM inventory_movements im
        LEFT JOIN users u ON im.performed_by = u.id
@@ -918,11 +976,28 @@ const getStockMovements = async (req, res, next) => {
       [id, companyId],
     );
 
+    // Mouvements d'entrepôt liés à ce produit via le catalogue global
+    let warehouseMovements = [];
+    if (product.catalog_product_id) {
+      [warehouseMovements] = await pool.query(
+        `SELECT wm.*, w.name as warehouse_name, u.first_name as performed_by_name, c.name as destination_company_name
+         FROM warehouse_movements wm
+         JOIN warehouses w ON wm.warehouse_id = w.id
+         LEFT JOIN users u ON wm.performed_by = u.id
+         LEFT JOIN companies c ON wm.destination_company_id = c.id
+         WHERE wm.catalog_product_id = ?
+         ORDER BY wm.created_at DESC`,
+        [product.catalog_product_id]
+      );
+    }
+
     res.status(200).json({
       success: true,
       data: {
-        movements,
-        total: movements.length,
+        boutiqueMovements,
+        warehouseMovements,
+        totalBoutique: boutiqueMovements.length,
+        totalWarehouse: warehouseMovements.length,
       },
     });
   } catch (error) {
