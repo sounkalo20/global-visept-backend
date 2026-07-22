@@ -12,8 +12,9 @@ const getDashboardStats = async (req, res, next) => {
         const [todaySales] = await pool.query(
             `SELECT 
         COUNT(*) as total_sales,
-        COALESCE(SUM(total_amount), 0) as total_revenue,
-        COALESCE(AVG(total_amount), 0) as average_sale,
+        COALESCE(SUM(total_amount - returned_amount), 0) as total_revenue,
+        COALESCE(SUM(returned_amount), 0) as total_returned,
+        COALESCE(AVG(total_amount - returned_amount), 0) as average_sale,
         COUNT(DISTINCT client_id) as unique_clients
        FROM sales
        WHERE company_id = ? AND DATE(sale_date) = ? AND status = 'completed'`,
@@ -24,7 +25,8 @@ const getDashboardStats = async (req, res, next) => {
         const [monthSales] = await pool.query(
             `SELECT 
         COUNT(*) as total_sales,
-        COALESCE(SUM(total_amount), 0) as total_revenue,
+        COALESCE(SUM(total_amount - returned_amount), 0) as total_revenue,
+        COALESCE(SUM(returned_amount), 0) as total_returned,
         COALESCE(SUM(amount_paid), 0) as total_paid,
         COALESCE(SUM(amount_due), 0) as total_due
        FROM sales
@@ -105,7 +107,7 @@ const getDashboardStats = async (req, res, next) => {
         const [topClients] = await pool.query(
             `SELECT c.id, c.full_name, c.phone,
               COUNT(s.id) as total_purchases,
-              COALESCE(SUM(s.total_amount), 0) as total_spent
+              COALESCE(SUM(s.total_amount - s.returned_amount), 0) as total_spent
        FROM sales s
        JOIN clients c ON s.client_id = c.id
        WHERE s.company_id = ? AND s.status = 'completed'
@@ -121,7 +123,7 @@ const getDashboardStats = async (req, res, next) => {
             `SELECT 
         DATE(sale_date) as date,
         COUNT(*) as count,
-        COALESCE(SUM(total_amount), 0) as revenue
+        COALESCE(SUM(total_amount - returned_amount), 0) as revenue
        FROM sales
        WHERE company_id = ? AND status = 'completed'
          AND sale_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
@@ -135,7 +137,7 @@ const getDashboardStats = async (req, res, next) => {
             `SELECT 
         payment_method,
         COUNT(*) as count,
-        COALESCE(SUM(total_amount), 0) as total
+        COALESCE(SUM(total_amount - returned_amount), 0) as total
        FROM sales
        WHERE company_id = ? AND status = 'completed'
          AND DATE(sale_date) >= ?

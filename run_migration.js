@@ -14,7 +14,7 @@ async function run() {
       multipleStatements: true
     });
 
-    const sqlPath = path.join(__dirname, 'bdd', 'warehouses.sql');
+    const sqlPath = path.join(__dirname, 'bdd', 'returns.sql');
     const sql = fs.readFileSync(sqlPath, 'utf8');
 
     console.log('Running SQL...');

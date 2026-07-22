@@ -520,6 +520,27 @@ const getSaleById = async (req, res, next) => {
       [id],
     );
 
+    // Récupérer les retours liés
+    const [returns] = await pool.query(
+      `SELECT sr.*, u.first_name as created_by_name
+       FROM sale_returns sr
+       LEFT JOIN users u ON sr.created_by = u.id
+       WHERE sr.sale_id = ? AND sr.company_id = ?`,
+      [id, companyId]
+    );
+
+    // Fetch items for each return
+    for (let r of returns) {
+      const [returnItems] = await pool.query(
+        `SELECT sri.*, p.name as product_name
+         FROM sale_return_items sri
+         JOIN products p ON sri.product_id = p.id
+         WHERE sri.sale_return_id = ?`,
+        [r.id]
+      );
+      r.items = returnItems;
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -527,6 +548,7 @@ const getSaleById = async (req, res, next) => {
           ...sales[0],
           items,
           stock_movements: stockMovements,
+          returns: returns,
         },
       },
     });

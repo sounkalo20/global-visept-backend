@@ -26,11 +26,24 @@ const createCompany = async (req, res, next) => {
       logoUrl = `${req.protocol}://${req.get('host')}/uploads/companies/${req.file.filename}`;
     }
 
+    // Vérifier si l'utilisateur a l'accès illimité
+    const [userRows] = await connection.query('SELECT has_unlimited_access FROM users WHERE id = ?', [req.user.id]);
+    const hasUnlimited = userRows[0]?.has_unlimited_access === 1;
+
+    let initialPlanId = 1; // FREE par défaut
+
+    if (hasUnlimited) {
+      const [planRows] = await connection.query("SELECT id FROM subscription_plans WHERE code = 'UNLIMITED'");
+      if (planRows.length > 0) {
+        initialPlanId = planRows[0].id;
+      }
+    }
+
     // Créer l'entreprise
     const [companyResult] = await connection.query(
       `INSERT INTO companies (uuid, name, slug, description, logo_url, business_type_id, 
-       subscription_plan_id, subscription_status, country, city, address, phone, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, 1, 'active', ?, ?, ?, ?, 1)`,
+       subscription_plan_id, subscription_status, subscription_ends_at, country, city, address, phone, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NULL, ?, ?, ?, ?, 1)`,
       [
         uuid,
         name,
@@ -38,6 +51,7 @@ const createCompany = async (req, res, next) => {
         description || null,
         logoUrl,
         business_type_id || 1,
+        initialPlanId,
         country || null,
         city || null,
         address || null,
@@ -62,11 +76,14 @@ const createCompany = async (req, res, next) => {
       [companyId]
     );
 
+    const companyData = companies[0];
+    companyData.my_role = 'owner';
+
     res.status(201).json({
       success: true,
       message: 'Entreprise créée avec succès.',
       data: {
-        company: companies[0],
+        company: companyData,
       },
     });
   } catch (error) {

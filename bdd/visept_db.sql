@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.2
+-- version 5.2.3
 -- https://www.phpmyadmin.net/
 --
--- Hôte : bp8w5subbvjgdxat3214-mysql.services.clever-cloud.com:3306
--- Généré le : mar. 21 juil. 2026 à 10:48
--- Version du serveur : 8.4.2-2
--- Version de PHP : 8.2.31
+-- Host: localhost:3306
+-- Generation Time: Jul 21, 2026 at 03:46 PM
+-- Server version: 8.4.3
+-- PHP Version: 8.3.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Base de données : `bp8w5subbvjgdxat3214`
+-- Database: `visept_db`
 --
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `admin_audit_logs`
+-- Table structure for table `admin_audit_logs`
 --
 
 CREATE TABLE `admin_audit_logs` (
@@ -39,7 +39,7 @@ CREATE TABLE `admin_audit_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `admin_audit_logs`
+-- Dumping data for table `admin_audit_logs`
 --
 
 INSERT INTO `admin_audit_logs` (`id`, `admin_id`, `action_type`, `target_type`, `target_id`, `details`, `ip_address`, `created_at`) VALUES
@@ -55,7 +55,7 @@ INSERT INTO `admin_audit_logs` (`id`, `admin_id`, `action_type`, `target_type`, 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `admin_notifications`
+-- Table structure for table `admin_notifications`
 --
 
 CREATE TABLE `admin_notifications` (
@@ -71,7 +71,7 @@ CREATE TABLE `admin_notifications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `admin_notifications`
+-- Dumping data for table `admin_notifications`
 --
 
 INSERT INTO `admin_notifications` (`id`, `company_id`, `user_id`, `type`, `title`, `message`, `is_read`, `sent_email`, `created_at`) VALUES
@@ -80,7 +80,7 @@ INSERT INTO `admin_notifications` (`id`, `company_id`, `user_id`, `type`, `title
 -- --------------------------------------------------------
 
 --
--- Structure de la table `appointments`
+-- Table structure for table `appointments`
 --
 
 CREATE TABLE `appointments` (
@@ -102,7 +102,7 @@ CREATE TABLE `appointments` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `appointment_services`
+-- Table structure for table `appointment_services`
 --
 
 CREATE TABLE `appointment_services` (
@@ -115,7 +115,7 @@ CREATE TABLE `appointment_services` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `business_types`
+-- Table structure for table `business_types`
 --
 
 CREATE TABLE `business_types` (
@@ -130,7 +130,7 @@ CREATE TABLE `business_types` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `business_types`
+-- Dumping data for table `business_types`
 --
 
 INSERT INTO `business_types` (`id`, `code`, `name`, `description`, `icon`, `is_active`, `created_at`, `updated_at`) VALUES
@@ -142,7 +142,7 @@ INSERT INTO `business_types` (`id`, `code`, `name`, `description`, `icon`, `is_a
 -- --------------------------------------------------------
 
 --
--- Structure de la table `categories`
+-- Table structure for table `categories`
 --
 
 CREATE TABLE `categories` (
@@ -161,7 +161,7 @@ CREATE TABLE `categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `categories`
+-- Dumping data for table `categories`
 --
 
 INSERT INTO `categories` (`id`, `company_id`, `parent_id`, `name`, `slug`, `description`, `image_url`, `sort_order`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -174,7 +174,7 @@ INSERT INTO `categories` (`id`, `company_id`, `parent_id`, `name`, `slug`, `desc
 -- --------------------------------------------------------
 
 --
--- Structure de la table `clients`
+-- Table structure for table `clients`
 --
 
 CREATE TABLE `clients` (
@@ -200,7 +200,7 @@ CREATE TABLE `clients` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `clients`
+-- Dumping data for table `clients`
 --
 
 INSERT INTO `clients` (`id`, `company_id`, `first_name`, `last_name`, `full_name`, `phone`, `email`, `address`, `city`, `notes`, `preferences`, `total_purchases`, `total_purchase_count`, `last_purchase_at`, `current_debt`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -213,7 +213,7 @@ INSERT INTO `clients` (`id`, `company_id`, `first_name`, `last_name`, `full_name
 -- --------------------------------------------------------
 
 --
--- Structure de la table `client_debts`
+-- Table structure for table `client_debts`
 --
 
 CREATE TABLE `client_debts` (
@@ -232,7 +232,7 @@ CREATE TABLE `client_debts` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `client_debts`
+-- Dumping data for table `client_debts`
 --
 
 INSERT INTO `client_debts` (`id`, `company_id`, `client_id`, `sale_id`, `total_amount`, `remaining_amount`, `status`, `due_date`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
@@ -248,7 +248,7 @@ INSERT INTO `client_debts` (`id`, `company_id`, `client_id`, `sale_id`, `total_a
 -- --------------------------------------------------------
 
 --
--- Structure de la table `companies`
+-- Table structure for table `companies`
 --
 
 CREATE TABLE `companies` (
@@ -280,7 +280,7 @@ CREATE TABLE `companies` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `companies`
+-- Dumping data for table `companies`
 --
 
 INSERT INTO `companies` (`id`, `uuid`, `name`, `slug`, `description`, `logo_url`, `business_type_id`, `subscription_plan_id`, `subscription_status`, `subscription_ends_at`, `country`, `city`, `address`, `phone`, `settings`, `is_active`, `created_at`, `updated_at`, `deleted_at`, `trial_ends_at`, `subscription_started_at`, `grace_period_ends_at`, `payment_reminder_sent_at`, `payment_reminder_count`, `last_subscription_check_at`) VALUES
@@ -295,7 +295,7 @@ INSERT INTO `companies` (`id`, `uuid`, `name`, `slug`, `description`, `logo_url`
 -- --------------------------------------------------------
 
 --
--- Structure de la table `debt_payments`
+-- Table structure for table `debt_payments`
 --
 
 CREATE TABLE `debt_payments` (
@@ -312,7 +312,7 @@ CREATE TABLE `debt_payments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `debt_payments`
+-- Dumping data for table `debt_payments`
 --
 
 INSERT INTO `debt_payments` (`id`, `company_id`, `client_debt_id`, `amount`, `payment_method`, `payment_reference`, `payment_date`, `received_by`, `note`, `created_at`) VALUES
@@ -330,7 +330,7 @@ INSERT INTO `debt_payments` (`id`, `company_id`, `client_debt_id`, `amount`, `pa
 -- --------------------------------------------------------
 
 --
--- Structure de la table `employee_schedules`
+-- Table structure for table `employee_schedules`
 --
 
 CREATE TABLE `employee_schedules` (
@@ -352,7 +352,7 @@ CREATE TABLE `employee_schedules` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `expenses`
+-- Table structure for table `expenses`
 --
 
 CREATE TABLE `expenses` (
@@ -373,7 +373,7 @@ CREATE TABLE `expenses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `expenses`
+-- Dumping data for table `expenses`
 --
 
 INSERT INTO `expenses` (`id`, `company_id`, `title`, `description`, `category`, `amount`, `currency`, `payment_method`, `payment_reference`, `expense_date`, `created_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -383,7 +383,7 @@ INSERT INTO `expenses` (`id`, `company_id`, `title`, `description`, `category`, 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `inventory_counts`
+-- Table structure for table `inventory_counts`
 --
 
 CREATE TABLE `inventory_counts` (
@@ -403,7 +403,7 @@ CREATE TABLE `inventory_counts` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `inventory_count_items`
+-- Table structure for table `inventory_count_items`
 --
 
 CREATE TABLE `inventory_count_items` (
@@ -421,7 +421,7 @@ CREATE TABLE `inventory_count_items` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `inventory_movements`
+-- Table structure for table `inventory_movements`
 --
 
 CREATE TABLE `inventory_movements` (
@@ -442,7 +442,7 @@ CREATE TABLE `inventory_movements` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `inventory_movements`
+-- Dumping data for table `inventory_movements`
 --
 
 INSERT INTO `inventory_movements` (`id`, `company_id`, `product_id`, `variant_id`, `movement_type`, `quantity`, `stock_before`, `stock_after`, `reference_type`, `reference_id`, `unit_cost`, `note`, `performed_by`, `created_at`) VALUES
@@ -468,12 +468,17 @@ INSERT INTO `inventory_movements` (`id`, `company_id`, `product_id`, `variant_id
 (20, 4, 4, NULL, 'sale', -1.000, 100.000, 99.000, 'sale', 12, 170000.00, NULL, 5, '2026-06-22 20:21:52'),
 (21, 4, 4, NULL, 'sale', -1.000, 99.000, 98.000, 'sale', 13, 170000.00, NULL, 5, '2026-06-22 21:15:22'),
 (22, 4, 3, NULL, 'sale', -1.000, 10.000, 9.000, 'sale', 14, 140000.00, NULL, 5, '2026-06-22 21:31:44'),
-(23, 4, 4, NULL, 'sale', -1.000, 98.000, 97.000, 'sale', 15, 170000.00, NULL, 5, '2026-06-22 21:38:28');
+(23, 4, 4, NULL, 'sale', -1.000, 98.000, 97.000, 'sale', 15, 170000.00, NULL, 5, '2026-06-22 21:38:28'),
+(24, 4, 7, NULL, 'purchase', 50.000, 10.000, 60.000, 'supplier_order', 3, 5000.00, NULL, 5, '2026-07-21 14:51:28'),
+(25, 4, 7, NULL, 'transfer_in', 20.000, 60.000, 80.000, 'warehouse_transfer', NULL, NULL, 'Réception depuis entrepôt entrepot principal', 5, '2026-07-21 14:54:06'),
+(26, 4, 7, NULL, 'purchase', 5.000, 80.000, 85.000, NULL, NULL, 5000.00, 'Ajustement manuel', 5, '2026-07-21 15:14:18'),
+(27, 4, 7, NULL, 'purchase', 20.000, 85.000, 105.000, NULL, NULL, 5000.00, 'Ajustement manuel', 5, '2026-07-21 15:14:31'),
+(28, 4, 7, NULL, 'purchase', 10.000, 105.000, 115.000, NULL, NULL, 5000.00, 'Ajustement manuel', 5, '2026-07-21 15:14:43');
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `measurement_units`
+-- Table structure for table `measurement_units`
 --
 
 CREATE TABLE `measurement_units` (
@@ -485,7 +490,7 @@ CREATE TABLE `measurement_units` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `measurement_units`
+-- Dumping data for table `measurement_units`
 --
 
 INSERT INTO `measurement_units` (`id`, `code`, `name`, `symbol`, `type`) VALUES
@@ -500,7 +505,7 @@ INSERT INTO `measurement_units` (`id`, `code`, `name`, `symbol`, `type`) VALUES
 -- --------------------------------------------------------
 
 --
--- Structure de la table `memberships`
+-- Table structure for table `memberships`
 --
 
 CREATE TABLE `memberships` (
@@ -518,7 +523,7 @@ CREATE TABLE `memberships` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `memberships`
+-- Dumping data for table `memberships`
 --
 
 INSERT INTO `memberships` (`id`, `user_id`, `company_id`, `role`, `custom_permissions`, `invitation_token`, `invited_at`, `joined_at`, `is_active`, `created_at`, `updated_at`) VALUES
@@ -534,12 +539,13 @@ INSERT INTO `memberships` (`id`, `user_id`, `company_id`, `role`, `custom_permis
 -- --------------------------------------------------------
 
 --
--- Structure de la table `products`
+-- Table structure for table `products`
 --
 
 CREATE TABLE `products` (
   `id` bigint UNSIGNED NOT NULL,
   `company_id` bigint UNSIGNED NOT NULL,
+  `catalog_product_id` bigint UNSIGNED DEFAULT NULL,
   `category_id` bigint UNSIGNED DEFAULT NULL,
   `unit_id` smallint UNSIGNED NOT NULL DEFAULT '1',
   `name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -566,21 +572,52 @@ CREATE TABLE `products` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `products`
+-- Dumping data for table `products`
 --
 
-INSERT INTO `products` (`id`, `company_id`, `category_id`, `unit_id`, `name`, `slug`, `description`, `ingredients_text`, `barcode`, `sku`, `cost_price`, `retail_price`, `wholesale_price`, `wholesale_min_qty`, `allow_custom_price`, `product_type`, `manage_stock`, `current_stock`, `low_stock_threshold`, `is_active`, `is_available`, `image_url`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(1, 2, 1, 1, 'produit test 1', 'produit-test-1-1779223077159', 'aucune', NULL, '2000247821435', 'AMP-PDFB0B', 10000.00, 11000.00, 10500.00, 5, 0, 'product', 1, 20.000, 10.000, 1, 1, 'http://localhost:5000/uploads/products/product-1779223077128-544221727.png', '2026-05-19 20:37:57', '2026-05-19 20:59:37', '2026-05-19 22:59:37'),
-(2, 2, 1, 1, 'produit test 2', 'produit-test-2-1779224262083', 'day 2 day ', NULL, '2000502621138', 'AMP-PDFB0C', 7500.00, 8500.00, 8000.00, 5, 0, 'product', 1, 24.000, 10.000, 1, 1, NULL, '2026-05-19 20:57:42', '2026-05-21 11:51:29', NULL),
-(3, 4, 4, 1, 'iphone 13 pro', 'iphone-13-pro-1782133776087', 'telephone de marque apple', NULL, '', '', 140000.00, 200000.00, 195000.00, 1, 0, 'product', 1, 9.000, 4.000, 1, 1, NULL, '2026-06-22 12:46:09', '2026-06-22 21:31:44', NULL),
-(4, 4, 4, 1, 'ordinateur', 'ordinateur-1782133887203', 'ordi', NULL, NULL, NULL, 170000.00, 200000.00, 195000.00, 1, 0, 'product', 1, 97.000, 1.000, 1, 1, NULL, '2026-06-22 13:11:27', '2026-06-22 21:38:28', NULL),
-(5, 5, 5, 7, 'plat1-test', 'plat1-test-1782226978271', NULL, 'riz , viande , frittes', NULL, NULL, 0.00, 2000.00, 0.00, 1, 0, 'dish', 0, 0.000, 10.000, 1, 1, NULL, '2026-06-23 15:01:40', '2026-06-23 15:02:58', NULL),
-(6, 4, 4, 1, 'iphone 14 pro', 'iphone-14-pro-1782250821426', 'aucune', NULL, NULL, NULL, 200000.00, 2500000.00, 245000.00, 1, 0, 'product', 1, 20.000, 10.000, 1, 1, 'http://global-visept-backend.onrender.com/uploads/products/product-1782250788984-669583536.png', '2026-06-23 21:39:49', '2026-06-23 21:40:21', NULL);
+INSERT INTO `products` (`id`, `company_id`, `catalog_product_id`, `category_id`, `unit_id`, `name`, `slug`, `description`, `ingredients_text`, `barcode`, `sku`, `cost_price`, `retail_price`, `wholesale_price`, `wholesale_min_qty`, `allow_custom_price`, `product_type`, `manage_stock`, `current_stock`, `low_stock_threshold`, `is_active`, `is_available`, `image_url`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 2, NULL, 1, 1, 'produit test 1', 'produit-test-1-1779223077159', 'aucune', NULL, '2000247821435', 'AMP-PDFB0B', 10000.00, 11000.00, 10500.00, 5, 0, 'product', 1, 20.000, 10.000, 1, 1, 'http://localhost:5000/uploads/products/product-1779223077128-544221727.png', '2026-05-19 20:37:57', '2026-05-19 20:59:37', '2026-05-19 22:59:37'),
+(2, 2, NULL, 1, 1, 'produit test 2', 'produit-test-2-1779224262083', 'day 2 day ', NULL, '2000502621138', 'AMP-PDFB0C', 7500.00, 8500.00, 8000.00, 5, 0, 'product', 1, 24.000, 10.000, 1, 1, NULL, '2026-05-19 20:57:42', '2026-05-21 11:51:29', NULL),
+(3, 4, 3, 4, 1, 'iphone 13 pro', 'iphone-13-pro-1782133776087', 'telephone de marque apple', NULL, '', '', 200000.00, 200000.00, 195000.00, 1, 0, 'product', 1, 9.000, 4.000, 1, 1, NULL, '2026-06-22 12:46:09', '2026-07-21 14:59:43', NULL),
+(4, 4, NULL, 4, 1, 'ordinateur', 'ordinateur-1782133887203', 'ordi', NULL, NULL, NULL, 170000.00, 200000.00, 195000.00, 1, 0, 'product', 1, 97.000, 1.000, 1, 1, NULL, '2026-06-22 13:11:27', '2026-06-22 21:38:28', NULL),
+(5, 5, NULL, 5, 7, 'plat1-test', 'plat1-test-1782226978271', NULL, 'riz , viande , frittes', NULL, NULL, 0.00, 2000.00, 0.00, 1, 0, 'dish', 0, 0.000, 10.000, 1, 1, NULL, '2026-06-23 15:01:40', '2026-06-23 15:02:58', NULL),
+(6, 4, 2, 4, 1, 'iphone 14 pro', 'iphone-14-pro-1782250821426', 'aucune', NULL, NULL, NULL, 250000.00, 2500000.00, 245000.00, 1, 0, 'product', 1, 20.000, 10.000, 1, 1, 'http://global-visept-backend.onrender.com/uploads/products/product-1782250788984-669583536.png', '2026-06-23 21:39:49', '2026-07-21 14:59:42', NULL),
+(7, 4, 1, 4, 1, 'test3', 'test3-1784645195182', 'mon produit cool', NULL, NULL, NULL, 5000.00, 7500.00, 7000.00, 10, 0, 'product', 1, 115.000, 5.000, 1, 1, NULL, '2026-07-21 14:46:11', '2026-07-21 15:14:43', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `product_compositions`
+-- Table structure for table `product_catalog`
+--
+
+CREATE TABLE `product_catalog` (
+  `id` bigint UNSIGNED NOT NULL,
+  `owner_id` bigint UNSIGNED NOT NULL,
+  `name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `slug` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `barcode` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `image_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `unit_id` smallint UNSIGNED NOT NULL DEFAULT '1',
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `product_catalog`
+--
+
+INSERT INTO `product_catalog` (`id`, `owner_id`, `name`, `slug`, `barcode`, `description`, `image_url`, `unit_id`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 5, 'test3', 'test3', NULL, 'mon produit cool', NULL, 1, 1, '2026-07-21 14:46:11', '2026-07-21 14:46:11', NULL),
+(2, 5, 'iphone 14 pro', 'iphone-14-pro', NULL, 'aucune', 'http://global-visept-backend.onrender.com/uploads/products/product-1782250788984-669583536.png', 1, 1, '2026-07-21 14:59:42', '2026-07-21 14:59:42', NULL),
+(3, 5, 'iphone 13 pro', 'iphone-13-pro', NULL, 'telephone de marque apple', NULL, 1, 1, '2026-07-21 14:59:43', '2026-07-21 14:59:43', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `product_compositions`
 --
 
 CREATE TABLE `product_compositions` (
@@ -597,7 +634,7 @@ CREATE TABLE `product_compositions` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `product_variants`
+-- Table structure for table `product_variants`
 --
 
 CREATE TABLE `product_variants` (
@@ -619,7 +656,7 @@ CREATE TABLE `product_variants` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `restaurant_tables`
+-- Table structure for table `restaurant_tables`
 --
 
 CREATE TABLE `restaurant_tables` (
@@ -640,7 +677,7 @@ CREATE TABLE `restaurant_tables` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `sales`
+-- Table structure for table `sales`
 --
 
 CREATE TABLE `sales` (
@@ -672,7 +709,7 @@ CREATE TABLE `sales` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `sales`
+-- Dumping data for table `sales`
 --
 
 INSERT INTO `sales` (`id`, `company_id`, `sale_number`, `client_id`, `client_name`, `subtotal`, `discount_amount`, `discount_type`, `discount_value`, `tax_amount`, `total_amount`, `payment_status`, `amount_paid`, `amount_due`, `payment_method`, `payment_reference`, `status`, `cancel_reason`, `table_id`, `table_session_id`, `seller_id`, `notes`, `sale_date`, `created_at`, `updated_at`) VALUES
@@ -697,7 +734,7 @@ INSERT INTO `sales` (`id`, `company_id`, `sale_number`, `client_id`, `client_nam
 -- --------------------------------------------------------
 
 --
--- Structure de la table `sale_items`
+-- Table structure for table `sale_items`
 --
 
 CREATE TABLE `sale_items` (
@@ -719,7 +756,7 @@ CREATE TABLE `sale_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `sale_items`
+-- Dumping data for table `sale_items`
 --
 
 INSERT INTO `sale_items` (`id`, `sale_id`, `product_id`, `variant_id`, `quantity`, `price_type`, `unit_price`, `retail_price_ref`, `wholesale_price_ref`, `total_price`, `discount_amount`, `cost_price`, `item_status`, `notes`, `created_at`) VALUES
@@ -744,7 +781,7 @@ INSERT INTO `sale_items` (`id`, `sale_id`, `product_id`, `variant_id`, `quantity
 -- --------------------------------------------------------
 
 --
--- Structure de la table `staff_services`
+-- Table structure for table `staff_services`
 --
 
 CREATE TABLE `staff_services` (
@@ -757,7 +794,7 @@ CREATE TABLE `staff_services` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `subscription_invoices`
+-- Table structure for table `subscription_invoices`
 --
 
 CREATE TABLE `subscription_invoices` (
@@ -775,7 +812,7 @@ CREATE TABLE `subscription_invoices` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `subscription_invoices`
+-- Dumping data for table `subscription_invoices`
 --
 
 INSERT INTO `subscription_invoices` (`id`, `company_id`, `plan_id`, `amount`, `currency`, `status`, `payment_method`, `paid_at`, `period_start`, `period_end`, `created_at`) VALUES
@@ -784,7 +821,7 @@ INSERT INTO `subscription_invoices` (`id`, `company_id`, `plan_id`, `amount`, `c
 -- --------------------------------------------------------
 
 --
--- Structure de la table `subscription_payment_proofs`
+-- Table structure for table `subscription_payment_proofs`
 --
 
 CREATE TABLE `subscription_payment_proofs` (
@@ -806,7 +843,7 @@ CREATE TABLE `subscription_payment_proofs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `subscription_payment_proofs`
+-- Dumping data for table `subscription_payment_proofs`
 --
 
 INSERT INTO `subscription_payment_proofs` (`id`, `company_id`, `subscription_invoice_id`, `plan_id`, `amount`, `payment_method`, `payment_reference`, `proof_file_url`, `status`, `submitted_at`, `reviewed_by`, `reviewed_at`, `rejection_reason`, `notes`, `created_at`) VALUES
@@ -815,7 +852,7 @@ INSERT INTO `subscription_payment_proofs` (`id`, `company_id`, `subscription_inv
 -- --------------------------------------------------------
 
 --
--- Structure de la table `subscription_plans`
+-- Table structure for table `subscription_plans`
 --
 
 CREATE TABLE `subscription_plans` (
@@ -834,7 +871,7 @@ CREATE TABLE `subscription_plans` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `subscription_plans`
+-- Dumping data for table `subscription_plans`
 --
 
 INSERT INTO `subscription_plans` (`id`, `code`, `name`, `price_monthly`, `price_yearly`, `max_employees`, `max_products`, `max_clients`, `features`, `is_active`, `created_at`, `updated_at`) VALUES
@@ -846,7 +883,7 @@ INSERT INTO `subscription_plans` (`id`, `code`, `name`, `price_monthly`, `price_
 -- --------------------------------------------------------
 
 --
--- Structure de la table `suppliers`
+-- Table structure for table `suppliers`
 --
 
 CREATE TABLE `suppliers` (
@@ -869,16 +906,16 @@ CREATE TABLE `suppliers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `suppliers`
+-- Dumping data for table `suppliers`
 --
 
 INSERT INTO `suppliers` (`id`, `company_id`, `company_name`, `contact_name`, `phone`, `email`, `address`, `city`, `country`, `notes`, `total_purchases`, `current_balance`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(1, 4, 'issa diarra', 'Gabrielle toure', '00332200', 'sidibesounk2003@gmail.com', 'Bamako', 'Bamako', 'Mali', 'fournisseur creer avec un solde initial de 1millions', 15700000.00, 13300000.00, 1, '2026-06-22 11:12:04', '2026-06-22 13:58:36', NULL);
+(1, 4, 'issa diarra', 'Gabrielle toure', '00332200', 'sidibesounk2003@gmail.com', 'Bamako', 'Bamako', 'Mali', 'fournisseur creer avec un solde initial de 1millions', 61700000.00, 39000000.00, 1, '2026-06-22 11:12:04', '2026-07-21 15:01:19', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `supplier_orders`
+-- Table structure for table `supplier_orders`
 --
 
 CREATE TABLE `supplier_orders` (
@@ -904,17 +941,19 @@ CREATE TABLE `supplier_orders` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `supplier_orders`
+-- Dumping data for table `supplier_orders`
 --
 
 INSERT INTO `supplier_orders` (`id`, `company_id`, `supplier_id`, `order_number`, `reference`, `status`, `subtotal`, `tax_amount`, `shipping_cost`, `total_amount`, `total_paid`, `remaining_balance`, `ordered_at`, `expected_at`, `received_at`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
 (1, 4, 1, 'BC-202606-0001', NULL, 'received', 700000.00, 0.00, 0.00, 700000.00, 400000.00, 300000.00, '2026-06-22 14:50:00', '2026-06-26', '2026-06-22 15:08:21', 'aucune note suplementaire', 5, '2026-06-22 12:50:00', '2026-06-22 13:14:13'),
-(2, 4, 1, 'BC-202606-0002', NULL, 'ordered', 15000000.00, 0.00, 0.00, 15000000.00, 1000000.00, 14000000.00, '2026-06-22 15:24:20', '2026-06-27', NULL, NULL, 5, '2026-06-22 13:24:20', '2026-06-22 13:26:17');
+(2, 4, 1, 'BC-202606-0002', NULL, 'ordered', 15000000.00, 0.00, 0.00, 15000000.00, 1000000.00, 14000000.00, '2026-06-22 15:24:20', '2026-06-27', NULL, NULL, 5, '2026-06-22 13:24:20', '2026-06-22 13:26:17'),
+(3, 4, 1, 'BC-202607-0001', NULL, 'partially_received', 1000000.00, 0.00, 0.00, 1000000.00, 300000.00, 700000.00, '2026-07-21 16:49:32', NULL, NULL, NULL, 5, '2026-07-21 14:49:32', '2026-07-21 14:51:28'),
+(4, 4, 1, 'BC-202607-0002', NULL, 'partially_received', 45000000.00, 0.00, 0.00, 45000000.00, 20000000.00, 25000000.00, '2026-07-21 16:59:13', NULL, NULL, NULL, 5, '2026-07-21 14:59:13', '2026-07-21 15:01:19');
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `supplier_order_items`
+-- Table structure for table `supplier_order_items`
 --
 
 CREATE TABLE `supplier_order_items` (
@@ -932,17 +971,20 @@ CREATE TABLE `supplier_order_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `supplier_order_items`
+-- Dumping data for table `supplier_order_items`
 --
 
 INSERT INTO `supplier_order_items` (`id`, `supplier_order_id`, `product_id`, `variant_id`, `quantity_ordered`, `quantity_received`, `unit_cost`, `total_cost`, `received_at`, `created_at`, `updated_at`) VALUES
 (1, 1, 3, NULL, 5.000, 5.000, 140000.00, 700000.00, '2026-06-22 15:08:21', '2026-06-22 12:50:00', '2026-06-22 13:08:21'),
-(2, 2, 4, NULL, 100.000, 0.000, 150000.00, 15000000.00, NULL, '2026-06-22 13:24:20', '2026-06-22 13:24:20');
+(2, 2, 4, NULL, 100.000, 0.000, 150000.00, 15000000.00, NULL, '2026-06-22 13:24:20', '2026-06-22 13:24:20'),
+(3, 3, 7, NULL, 200.000, 150.000, 5000.00, 1000000.00, '2026-07-21 16:57:34', '2026-07-21 14:49:32', '2026-07-21 14:57:34'),
+(4, 4, 6, NULL, 100.000, 50.000, 250000.00, 25000000.00, '2026-07-21 16:59:42', '2026-07-21 14:59:13', '2026-07-21 14:59:42'),
+(5, 4, 3, NULL, 100.000, 50.000, 200000.00, 20000000.00, '2026-07-21 16:59:43', '2026-07-21 14:59:13', '2026-07-21 14:59:43');
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `supplier_payments`
+-- Table structure for table `supplier_payments`
 --
 
 CREATE TABLE `supplier_payments` (
@@ -960,7 +1002,7 @@ CREATE TABLE `supplier_payments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `supplier_payments`
+-- Dumping data for table `supplier_payments`
 --
 
 INSERT INTO `supplier_payments` (`id`, `company_id`, `supplier_id`, `supplier_order_id`, `amount`, `payment_method`, `payment_reference`, `payment_date`, `paid_by`, `note`, `created_at`) VALUES
@@ -968,12 +1010,14 @@ INSERT INTO `supplier_payments` (`id`, `company_id`, `supplier_id`, `supplier_or
 (2, 4, 1, 1, 200000.00, 'cash', NULL, '2026-06-22', 5, NULL, '2026-06-22 13:14:13'),
 (3, 4, 1, 2, 400000.00, 'cash', NULL, '2026-06-22', 5, 'Paiement initial', '2026-06-22 13:24:20'),
 (4, 4, 1, 2, 600000.00, 'cash', NULL, '2026-06-22', 5, NULL, '2026-06-22 13:26:17'),
-(6, 4, 1, NULL, 1000000.00, 'cash', NULL, '2026-06-22', 5, NULL, '2026-06-22 13:58:35');
+(6, 4, 1, NULL, 1000000.00, 'cash', NULL, '2026-06-22', 5, NULL, '2026-06-22 13:58:35'),
+(7, 4, 1, 3, 300000.00, 'cash', NULL, '2026-07-21', 5, 'Paiement initial', '2026-07-21 14:49:32'),
+(8, 4, 1, 4, 20000000.00, 'cash', NULL, '2026-07-21', 5, NULL, '2026-07-21 15:01:19');
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `table_sessions`
+-- Table structure for table `table_sessions`
 --
 
 CREATE TABLE `table_sessions` (
@@ -990,7 +1034,7 @@ CREATE TABLE `table_sessions` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `users`
+-- Table structure for table `users`
 --
 
 CREATE TABLE `users` (
@@ -1011,7 +1055,7 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `users`
+-- Dumping data for table `users`
 --
 
 INSERT INTO `users` (`id`, `first_name`, `last_name`, `email`, `phone`, `password_hash`, `avatar_url`, `email_verified_at`, `last_login_at`, `last_login_ip`, `language`, `is_active`, `created_at`, `updated_at`) VALUES
@@ -1019,14 +1063,14 @@ INSERT INTO `users` (`id`, `first_name`, `last_name`, `email`, `phone`, `passwor
 (2, 'isac', 'diarra', 'isac@gmail.com', '70667847', '$2b$10$UR4EenIE7.1HPIBC82xCYedaXB8oDdB7RRtyT8mvizsQytqx6rXvi', NULL, NULL, NULL, NULL, 'fr', 1, '2026-05-19 13:42:27', '2026-05-19 13:42:27'),
 (3, 'Sounkalo', 'Sidibe', 'sidibe@hotmail.com', '8286320600', '$2b$10$Rdiikyrox5lBqaNf4pgSVOExnHIWeMlXoC/TJiSpZ11qR855AZY6u', NULL, NULL, '2026-06-19 15:32:29', NULL, 'fr', 1, '2026-06-19 13:32:29', '2026-06-19 13:32:29'),
 (4, 'super', 'Administrateur', 'super_admin@gmail.com', '98778899', '$2b$10$UR4EenIE7.1HPIBC82xCYedaXB8oDdB7RRtyT8mvizsQytqx6rXvi', NULL, NULL, '2026-06-23 22:58:00', NULL, 'fr', 1, '2026-06-21 21:00:32', '2026-06-23 20:58:00'),
-(5, 'kaba', 'traore', 'kaba@gmail.com', '65009060', '$2b$10$gNQ8L4RfTi.T3cJt2rlLf.7Q6PnoRxqEz3qD9oAqUuiFWnakb0A32', NULL, NULL, '2026-07-13 15:58:47', NULL, 'fr', 1, '2026-06-22 00:31:02', '2026-07-13 15:58:47'),
+(5, 'kaba', 'traore', 'kaba@gmail.com', '65009060', '$2b$10$gNQ8L4RfTi.T3cJt2rlLf.7Q6PnoRxqEz3qD9oAqUuiFWnakb0A32', NULL, NULL, '2026-07-21 14:32:29', NULL, 'fr', 1, '2026-06-22 00:31:02', '2026-07-21 12:32:29'),
 (6, 'Diallo ', 'Sidi', 'puralova29@gmail.com', '72122412', '$2b$10$e99DJhKhAqit7u5m.BHll..GGg70Ir/XQOXymsIbc1h60XpZUgDoe', NULL, NULL, NULL, NULL, 'fr', 1, '2026-06-24 13:32:15', '2026-06-24 13:32:15'),
 (7, 'ibrahim', 'diarra', 'ibradiarra@gmail.com', '+22382863288', '$2b$10$3cZis.ycVrpte0IWhBv93OZpiTEIlEULzqDQHWj5uRL4K/13.vH/2', NULL, NULL, NULL, NULL, 'fr', 1, '2026-07-13 15:24:00', '2026-07-13 15:24:00');
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `user_password_resets`
+-- Table structure for table `user_password_resets`
 --
 
 CREATE TABLE `user_password_resets` (
@@ -1039,7 +1083,7 @@ CREATE TABLE `user_password_resets` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `user_password_resets`
+-- Dumping data for table `user_password_resets`
 --
 
 INSERT INTO `user_password_resets` (`id`, `user_id`, `token`, `expires_at`, `used_at`, `created_at`) VALUES
@@ -1048,7 +1092,7 @@ INSERT INTO `user_password_resets` (`id`, `user_id`, `token`, `expires_at`, `use
 -- --------------------------------------------------------
 
 --
--- Structure de la table `user_sessions`
+-- Table structure for table `user_sessions`
 --
 
 CREATE TABLE `user_sessions` (
@@ -1063,7 +1107,7 @@ CREATE TABLE `user_sessions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `user_sessions`
+-- Dumping data for table `user_sessions`
 --
 
 INSERT INTO `user_sessions` (`id`, `user_id`, `token`, `ip_address`, `user_agent`, `expires_at`, `last_activity`, `created_at`) VALUES
@@ -1074,19 +1118,139 @@ INSERT INTO `user_sessions` (`id`, `user_id`, `token`, `ip_address`, `user_agent
 (11, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoic2lkaWJlc291bmsyMDAzQGdtYWlsLmNvbSIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzc5MTQ0NjI1LCJleHAiOjE3Nzk3NDk0MjV9.o9-c2O_rURvBM7lzZVYi_Z4LLA8qOWGzT-Y28VDonUI', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36', '2026-05-25 22:50:26', '2026-05-19 00:50:25', '2026-05-18 22:50:25'),
 (14, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoic2lkaWJlc291bmsyMDAzQGdtYWlsLmNvbSIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzc5MTQ3MjM5LCJleHAiOjE3Nzk3NTIwMzl9.s27BRTWYdbl2f4dWjSmo5DPo2CeHlGuJMlWi-os0Jcc', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36', '2026-05-25 23:33:59', '2026-05-19 01:33:59', '2026-05-18 23:33:59');
 
+-- --------------------------------------------------------
+
 --
--- Index pour les tables déchargées
+-- Table structure for table `warehouses`
+--
+
+CREATE TABLE `warehouses` (
+  `id` bigint UNSIGNED NOT NULL,
+  `owner_id` bigint UNSIGNED NOT NULL COMMENT 'FK vers users.id (le propriétaire)',
+  `name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` enum('active','inactive') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'active',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `warehouses`
+--
+
+INSERT INTO `warehouses` (`id`, `owner_id`, `name`, `description`, `address`, `status`, `created_at`, `updated_at`) VALUES
+(1, 5, 'entrepot principal', 'qwertyuiop', 'bamako-coura', 'active', '2026-07-21 13:41:47', '2026-07-21 13:41:47');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `warehouse_movements`
+--
+
+CREATE TABLE `warehouse_movements` (
+  `id` bigint UNSIGNED NOT NULL,
+  `warehouse_id` bigint UNSIGNED NOT NULL,
+  `catalog_product_id` bigint UNSIGNED NOT NULL,
+  `movement_type` enum('in_from_supplier','transfer_to_shop','transfer_to_warehouse','adjustment','manual') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `quantity` decimal(12,3) NOT NULL COMMENT 'Positif=entrée, Négatif=sortie',
+  `stock_before` decimal(12,3) NOT NULL,
+  `stock_after` decimal(12,3) NOT NULL,
+  `reference_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'supplier_order, manual',
+  `reference_id` bigint UNSIGNED DEFAULT NULL,
+  `destination_company_id` bigint UNSIGNED DEFAULT NULL COMMENT 'Si transféré vers une boutique',
+  `performed_by` bigint UNSIGNED DEFAULT NULL COMMENT 'Utilisateur ayant fait l''opération',
+  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `warehouse_movements`
+--
+
+INSERT INTO `warehouse_movements` (`id`, `warehouse_id`, `catalog_product_id`, `movement_type`, `quantity`, `stock_before`, `stock_after`, `reference_type`, `reference_id`, `destination_company_id`, `performed_by`, `notes`, `created_at`) VALUES
+(1, 1, 1, 'in_from_supplier', 200.000, 0.000, 200.000, 'manual', NULL, NULL, 5, 'Stock initial', '2026-07-21 14:46:11'),
+(4, 1, 1, 'transfer_to_shop', -20.000, 200.000, 180.000, 'manual', NULL, 4, 5, 'Transfert vers boutique', '2026-07-21 14:54:05'),
+(5, 1, 1, 'in_from_supplier', 100.000, 180.000, 280.000, 'supplier_order', 3, NULL, 5, NULL, '2026-07-21 14:57:34'),
+(6, 1, 2, 'in_from_supplier', 50.000, 0.000, 50.000, 'supplier_order', 4, NULL, 5, NULL, '2026-07-21 14:59:42'),
+(7, 1, 3, 'in_from_supplier', 50.000, 0.000, 50.000, 'supplier_order', 4, NULL, 5, NULL, '2026-07-21 14:59:43');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `warehouse_movements_backup_20260721`
+--
+
+CREATE TABLE `warehouse_movements_backup_20260721` (
+  `id` bigint UNSIGNED NOT NULL DEFAULT '0',
+  `warehouse_id` bigint UNSIGNED NOT NULL,
+  `product_id` bigint UNSIGNED NOT NULL,
+  `movement_type` enum('in_from_supplier','transfer_to_shop','transfer_to_warehouse','adjustment','manual') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `quantity` decimal(12,3) NOT NULL COMMENT 'Positif=entrée, Négatif=sortie',
+  `stock_before` decimal(12,3) NOT NULL,
+  `stock_after` decimal(12,3) NOT NULL,
+  `reference_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'supplier_order, manual',
+  `reference_id` bigint UNSIGNED DEFAULT NULL,
+  `destination_company_id` bigint UNSIGNED DEFAULT NULL COMMENT 'Si transféré vers une boutique',
+  `performed_by` bigint UNSIGNED DEFAULT NULL COMMENT 'Utilisateur ayant fait l''opération',
+  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `warehouse_stocks`
+--
+
+CREATE TABLE `warehouse_stocks` (
+  `id` bigint UNSIGNED NOT NULL,
+  `warehouse_id` bigint UNSIGNED NOT NULL,
+  `catalog_product_id` bigint UNSIGNED NOT NULL,
+  `quantity` decimal(12,3) NOT NULL DEFAULT '0.000',
+  `reserved_quantity` decimal(12,3) NOT NULL DEFAULT '0.000',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `warehouse_stocks`
+--
+
+INSERT INTO `warehouse_stocks` (`id`, `warehouse_id`, `catalog_product_id`, `quantity`, `reserved_quantity`, `created_at`, `updated_at`) VALUES
+(1, 1, 1, 280.000, 0.000, '2026-07-21 14:46:11', '2026-07-21 14:57:34'),
+(2, 1, 2, 50.000, 0.000, '2026-07-21 14:59:42', '2026-07-21 14:59:42'),
+(3, 1, 3, 50.000, 0.000, '2026-07-21 14:59:43', '2026-07-21 14:59:43');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `warehouse_stocks_backup_20260721`
+--
+
+CREATE TABLE `warehouse_stocks_backup_20260721` (
+  `id` bigint UNSIGNED NOT NULL DEFAULT '0',
+  `warehouse_id` bigint UNSIGNED NOT NULL,
+  `product_id` bigint UNSIGNED NOT NULL,
+  `quantity` decimal(12,3) NOT NULL DEFAULT '0.000',
+  `reserved_quantity` decimal(12,3) NOT NULL DEFAULT '0.000',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Indexes for dumped tables
 --
 
 --
--- Index pour la table `admin_audit_logs`
+-- Indexes for table `admin_audit_logs`
 --
 ALTER TABLE `admin_audit_logs`
   ADD PRIMARY KEY (`id`),
   ADD KEY `admin_id` (`admin_id`);
 
 --
--- Index pour la table `admin_notifications`
+-- Indexes for table `admin_notifications`
 --
 ALTER TABLE `admin_notifications`
   ADD PRIMARY KEY (`id`),
@@ -1094,7 +1258,7 @@ ALTER TABLE `admin_notifications`
   ADD KEY `user_id` (`user_id`);
 
 --
--- Index pour la table `appointments`
+-- Indexes for table `appointments`
 --
 ALTER TABLE `appointments`
   ADD PRIMARY KEY (`id`),
@@ -1105,7 +1269,7 @@ ALTER TABLE `appointments`
   ADD KEY `created_by` (`created_by`);
 
 --
--- Index pour la table `appointment_services`
+-- Indexes for table `appointment_services`
 --
 ALTER TABLE `appointment_services`
   ADD PRIMARY KEY (`id`),
@@ -1113,14 +1277,14 @@ ALTER TABLE `appointment_services`
   ADD KEY `service_id` (`service_id`);
 
 --
--- Index pour la table `business_types`
+-- Indexes for table `business_types`
 --
 ALTER TABLE `business_types`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `code` (`code`);
 
 --
--- Index pour la table `categories`
+-- Indexes for table `categories`
 --
 ALTER TABLE `categories`
   ADD PRIMARY KEY (`id`),
@@ -1129,7 +1293,7 @@ ALTER TABLE `categories`
   ADD KEY `idx_categories_sort` (`sort_order`);
 
 --
--- Index pour la table `clients`
+-- Indexes for table `clients`
 --
 ALTER TABLE `clients`
   ADD PRIMARY KEY (`id`),
@@ -1139,7 +1303,7 @@ ALTER TABLE `clients`
   ADD KEY `idx_clients_debt` (`current_debt`);
 
 --
--- Index pour la table `client_debts`
+-- Indexes for table `client_debts`
 --
 ALTER TABLE `client_debts`
   ADD PRIMARY KEY (`id`),
@@ -1151,7 +1315,7 @@ ALTER TABLE `client_debts`
   ADD KEY `created_by` (`created_by`);
 
 --
--- Index pour la table `companies`
+-- Indexes for table `companies`
 --
 ALTER TABLE `companies`
   ADD PRIMARY KEY (`id`),
@@ -1162,7 +1326,7 @@ ALTER TABLE `companies`
   ADD KEY `idx_companies_subscription` (`subscription_plan_id`);
 
 --
--- Index pour la table `debt_payments`
+-- Indexes for table `debt_payments`
 --
 ALTER TABLE `debt_payments`
   ADD PRIMARY KEY (`id`),
@@ -1172,7 +1336,7 @@ ALTER TABLE `debt_payments`
   ADD KEY `received_by` (`received_by`);
 
 --
--- Index pour la table `employee_schedules`
+-- Indexes for table `employee_schedules`
 --
 ALTER TABLE `employee_schedules`
   ADD PRIMARY KEY (`id`),
@@ -1180,7 +1344,7 @@ ALTER TABLE `employee_schedules`
   ADD KEY `company_id` (`company_id`);
 
 --
--- Index pour la table `expenses`
+-- Indexes for table `expenses`
 --
 ALTER TABLE `expenses`
   ADD PRIMARY KEY (`id`),
@@ -1190,7 +1354,7 @@ ALTER TABLE `expenses`
   ADD KEY `idx_expenses_created_by` (`created_by`);
 
 --
--- Index pour la table `inventory_counts`
+-- Indexes for table `inventory_counts`
 --
 ALTER TABLE `inventory_counts`
   ADD PRIMARY KEY (`id`),
@@ -1199,7 +1363,7 @@ ALTER TABLE `inventory_counts`
   ADD KEY `validated_by` (`validated_by`);
 
 --
--- Index pour la table `inventory_count_items`
+-- Indexes for table `inventory_count_items`
 --
 ALTER TABLE `inventory_count_items`
   ADD PRIMARY KEY (`id`),
@@ -1208,7 +1372,7 @@ ALTER TABLE `inventory_count_items`
   ADD KEY `variant_id` (`variant_id`);
 
 --
--- Index pour la table `inventory_movements`
+-- Indexes for table `inventory_movements`
 --
 ALTER TABLE `inventory_movements`
   ADD PRIMARY KEY (`id`),
@@ -1221,14 +1385,14 @@ ALTER TABLE `inventory_movements`
   ADD KEY `performed_by` (`performed_by`);
 
 --
--- Index pour la table `measurement_units`
+-- Indexes for table `measurement_units`
 --
 ALTER TABLE `measurement_units`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `code` (`code`);
 
 --
--- Index pour la table `memberships`
+-- Indexes for table `memberships`
 --
 ALTER TABLE `memberships`
   ADD PRIMARY KEY (`id`),
@@ -1238,22 +1402,34 @@ ALTER TABLE `memberships`
   ADD KEY `idx_memberships_role` (`role`);
 
 --
--- Index pour la table `products`
+-- Indexes for table `products`
 --
 ALTER TABLE `products`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_product_slug_company` (`company_id`,`slug`),
   ADD UNIQUE KEY `uq_product_barcode_company` (`company_id`,`barcode`),
+  ADD UNIQUE KEY `uq_products_company_catalog` (`company_id`,`catalog_product_id`),
   ADD KEY `idx_products_category` (`category_id`),
   ADD KEY `idx_products_type` (`product_type`),
   ADD KEY `idx_products_barcode` (`barcode`),
   ADD KEY `idx_products_sku` (`sku`),
   ADD KEY `idx_products_stock` (`current_stock`),
-  ADD KEY `unit_id` (`unit_id`);
+  ADD KEY `unit_id` (`unit_id`),
+  ADD KEY `fk_products_catalog` (`catalog_product_id`);
 ALTER TABLE `products` ADD FULLTEXT KEY `ft_products_name` (`name`);
 
 --
--- Index pour la table `product_compositions`
+-- Indexes for table `product_catalog`
+--
+ALTER TABLE `product_catalog`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_product_catalog_slug` (`owner_id`,`slug`),
+  ADD UNIQUE KEY `uq_product_catalog_barcode` (`owner_id`,`barcode`),
+  ADD KEY `idx_product_catalog_owner` (`owner_id`),
+  ADD KEY `fk_product_catalog_unit` (`unit_id`);
+
+--
+-- Indexes for table `product_compositions`
 --
 ALTER TABLE `product_compositions`
   ADD PRIMARY KEY (`id`),
@@ -1263,7 +1439,7 @@ ALTER TABLE `product_compositions`
   ADD KEY `unit_id` (`unit_id`);
 
 --
--- Index pour la table `product_variants`
+-- Indexes for table `product_variants`
 --
 ALTER TABLE `product_variants`
   ADD PRIMARY KEY (`id`),
@@ -1272,7 +1448,7 @@ ALTER TABLE `product_variants`
   ADD KEY `idx_variants_product` (`product_id`);
 
 --
--- Index pour la table `restaurant_tables`
+-- Indexes for table `restaurant_tables`
 --
 ALTER TABLE `restaurant_tables`
   ADD PRIMARY KEY (`id`),
@@ -1280,7 +1456,7 @@ ALTER TABLE `restaurant_tables`
   ADD KEY `idx_tables_status` (`company_id`,`status`);
 
 --
--- Index pour la table `sales`
+-- Indexes for table `sales`
 --
 ALTER TABLE `sales`
   ADD PRIMARY KEY (`id`),
@@ -1293,7 +1469,7 @@ ALTER TABLE `sales`
   ADD KEY `idx_sales_table` (`table_id`);
 
 --
--- Index pour la table `sale_items`
+-- Indexes for table `sale_items`
 --
 ALTER TABLE `sale_items`
   ADD PRIMARY KEY (`id`),
@@ -1303,7 +1479,7 @@ ALTER TABLE `sale_items`
   ADD KEY `variant_id` (`variant_id`);
 
 --
--- Index pour la table `staff_services`
+-- Indexes for table `staff_services`
 --
 ALTER TABLE `staff_services`
   ADD PRIMARY KEY (`id`),
@@ -1312,7 +1488,7 @@ ALTER TABLE `staff_services`
   ADD KEY `service_id` (`service_id`);
 
 --
--- Index pour la table `subscription_invoices`
+-- Indexes for table `subscription_invoices`
 --
 ALTER TABLE `subscription_invoices`
   ADD PRIMARY KEY (`id`),
@@ -1321,7 +1497,7 @@ ALTER TABLE `subscription_invoices`
   ADD KEY `plan_id` (`plan_id`);
 
 --
--- Index pour la table `subscription_payment_proofs`
+-- Indexes for table `subscription_payment_proofs`
 --
 ALTER TABLE `subscription_payment_proofs`
   ADD PRIMARY KEY (`id`),
@@ -1331,14 +1507,14 @@ ALTER TABLE `subscription_payment_proofs`
   ADD KEY `reviewed_by` (`reviewed_by`);
 
 --
--- Index pour la table `subscription_plans`
+-- Indexes for table `subscription_plans`
 --
 ALTER TABLE `subscription_plans`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `code` (`code`);
 
 --
--- Index pour la table `suppliers`
+-- Indexes for table `suppliers`
 --
 ALTER TABLE `suppliers`
   ADD PRIMARY KEY (`id`),
@@ -1346,7 +1522,7 @@ ALTER TABLE `suppliers`
   ADD KEY `idx_suppliers_phone` (`phone`);
 
 --
--- Index pour la table `supplier_orders`
+-- Indexes for table `supplier_orders`
 --
 ALTER TABLE `supplier_orders`
   ADD PRIMARY KEY (`id`),
@@ -1357,7 +1533,7 @@ ALTER TABLE `supplier_orders`
   ADD KEY `created_by` (`created_by`);
 
 --
--- Index pour la table `supplier_order_items`
+-- Indexes for table `supplier_order_items`
 --
 ALTER TABLE `supplier_order_items`
   ADD PRIMARY KEY (`id`),
@@ -1366,7 +1542,7 @@ ALTER TABLE `supplier_order_items`
   ADD KEY `variant_id` (`variant_id`);
 
 --
--- Index pour la table `supplier_payments`
+-- Indexes for table `supplier_payments`
 --
 ALTER TABLE `supplier_payments`
   ADD PRIMARY KEY (`id`),
@@ -1377,7 +1553,7 @@ ALTER TABLE `supplier_payments`
   ADD KEY `paid_by` (`paid_by`);
 
 --
--- Index pour la table `table_sessions`
+-- Indexes for table `table_sessions`
 --
 ALTER TABLE `table_sessions`
   ADD PRIMARY KEY (`id`),
@@ -1386,7 +1562,7 @@ ALTER TABLE `table_sessions`
   ADD KEY `staff_id` (`staff_id`);
 
 --
--- Index pour la table `users`
+-- Indexes for table `users`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
@@ -1397,7 +1573,7 @@ ALTER TABLE `users`
   ADD KEY `idx_users_is_active` (`is_active`);
 
 --
--- Index pour la table `user_password_resets`
+-- Indexes for table `user_password_resets`
 --
 ALTER TABLE `user_password_resets`
   ADD PRIMARY KEY (`id`),
@@ -1405,7 +1581,7 @@ ALTER TABLE `user_password_resets`
   ADD KEY `idx_resets_user` (`user_id`);
 
 --
--- Index pour la table `user_sessions`
+-- Indexes for table `user_sessions`
 --
 ALTER TABLE `user_sessions`
   ADD PRIMARY KEY (`id`),
@@ -1413,238 +1589,288 @@ ALTER TABLE `user_sessions`
   ADD KEY `idx_sessions_user` (`user_id`);
 
 --
--- AUTO_INCREMENT pour les tables déchargées
+-- Indexes for table `warehouses`
+--
+ALTER TABLE `warehouses`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_warehouses_owner` (`owner_id`);
+
+--
+-- Indexes for table `warehouse_movements`
+--
+ALTER TABLE `warehouse_movements`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_wm_warehouse` (`warehouse_id`),
+  ADD KEY `idx_wm_type` (`movement_type`),
+  ADD KEY `fk_wm_user` (`performed_by`),
+  ADD KEY `fk_wm_company` (`destination_company_id`),
+  ADD KEY `idx_wm_catalog_product` (`catalog_product_id`);
+
+--
+-- Indexes for table `warehouse_stocks`
+--
+ALTER TABLE `warehouse_stocks`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_warehouse_catalog_product` (`warehouse_id`,`catalog_product_id`),
+  ADD KEY `idx_warehouse_stocks_catalog_product` (`catalog_product_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT pour la table `admin_audit_logs`
+-- AUTO_INCREMENT for table `admin_audit_logs`
 --
 ALTER TABLE `admin_audit_logs`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT pour la table `admin_notifications`
+-- AUTO_INCREMENT for table `admin_notifications`
 --
 ALTER TABLE `admin_notifications`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT pour la table `appointments`
+-- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `appointment_services`
+-- AUTO_INCREMENT for table `appointment_services`
 --
 ALTER TABLE `appointment_services`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `business_types`
+-- AUTO_INCREMENT for table `business_types`
 --
 ALTER TABLE `business_types`
   MODIFY `id` tinyint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT pour la table `categories`
+-- AUTO_INCREMENT for table `categories`
 --
 ALTER TABLE `categories`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT pour la table `clients`
+-- AUTO_INCREMENT for table `clients`
 --
 ALTER TABLE `clients`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT pour la table `client_debts`
+-- AUTO_INCREMENT for table `client_debts`
 --
 ALTER TABLE `client_debts`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT pour la table `companies`
+-- AUTO_INCREMENT for table `companies`
 --
 ALTER TABLE `companies`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT pour la table `debt_payments`
+-- AUTO_INCREMENT for table `debt_payments`
 --
 ALTER TABLE `debt_payments`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
--- AUTO_INCREMENT pour la table `employee_schedules`
+-- AUTO_INCREMENT for table `employee_schedules`
 --
 ALTER TABLE `employee_schedules`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `expenses`
+-- AUTO_INCREMENT for table `expenses`
 --
 ALTER TABLE `expenses`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT pour la table `inventory_counts`
+-- AUTO_INCREMENT for table `inventory_counts`
 --
 ALTER TABLE `inventory_counts`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `inventory_count_items`
+-- AUTO_INCREMENT for table `inventory_count_items`
 --
 ALTER TABLE `inventory_count_items`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `inventory_movements`
+-- AUTO_INCREMENT for table `inventory_movements`
 --
 ALTER TABLE `inventory_movements`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
--- AUTO_INCREMENT pour la table `measurement_units`
+-- AUTO_INCREMENT for table `measurement_units`
 --
 ALTER TABLE `measurement_units`
   MODIFY `id` smallint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT pour la table `memberships`
+-- AUTO_INCREMENT for table `memberships`
 --
 ALTER TABLE `memberships`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT pour la table `products`
+-- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT pour la table `product_compositions`
+-- AUTO_INCREMENT for table `product_catalog`
+--
+ALTER TABLE `product_catalog`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `product_compositions`
 --
 ALTER TABLE `product_compositions`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `product_variants`
+-- AUTO_INCREMENT for table `product_variants`
 --
 ALTER TABLE `product_variants`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `restaurant_tables`
+-- AUTO_INCREMENT for table `restaurant_tables`
 --
 ALTER TABLE `restaurant_tables`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `sales`
+-- AUTO_INCREMENT for table `sales`
 --
 ALTER TABLE `sales`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
--- AUTO_INCREMENT pour la table `sale_items`
+-- AUTO_INCREMENT for table `sale_items`
 --
 ALTER TABLE `sale_items`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
--- AUTO_INCREMENT pour la table `staff_services`
+-- AUTO_INCREMENT for table `staff_services`
 --
 ALTER TABLE `staff_services`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `subscription_invoices`
+-- AUTO_INCREMENT for table `subscription_invoices`
 --
 ALTER TABLE `subscription_invoices`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT pour la table `subscription_payment_proofs`
+-- AUTO_INCREMENT for table `subscription_payment_proofs`
 --
 ALTER TABLE `subscription_payment_proofs`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT pour la table `subscription_plans`
+-- AUTO_INCREMENT for table `subscription_plans`
 --
 ALTER TABLE `subscription_plans`
   MODIFY `id` tinyint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT pour la table `suppliers`
+-- AUTO_INCREMENT for table `suppliers`
 --
 ALTER TABLE `suppliers`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT pour la table `supplier_orders`
+-- AUTO_INCREMENT for table `supplier_orders`
 --
 ALTER TABLE `supplier_orders`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT pour la table `supplier_order_items`
+-- AUTO_INCREMENT for table `supplier_order_items`
 --
 ALTER TABLE `supplier_order_items`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- AUTO_INCREMENT pour la table `supplier_payments`
+-- AUTO_INCREMENT for table `supplier_payments`
 --
 ALTER TABLE `supplier_payments`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT pour la table `table_sessions`
+-- AUTO_INCREMENT for table `table_sessions`
 --
 ALTER TABLE `table_sessions`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `users`
+-- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT pour la table `user_password_resets`
+-- AUTO_INCREMENT for table `user_password_resets`
 --
 ALTER TABLE `user_password_resets`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT pour la table `user_sessions`
+-- AUTO_INCREMENT for table `user_sessions`
 --
 ALTER TABLE `user_sessions`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
--- Contraintes pour les tables déchargées
+-- AUTO_INCREMENT for table `warehouses`
+--
+ALTER TABLE `warehouses`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `warehouse_movements`
+--
+ALTER TABLE `warehouse_movements`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `warehouse_stocks`
+--
+ALTER TABLE `warehouse_stocks`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- Constraints for dumped tables
 --
 
 --
--- Contraintes pour la table `admin_audit_logs`
+-- Constraints for table `admin_audit_logs`
 --
 ALTER TABLE `admin_audit_logs`
   ADD CONSTRAINT `admin_audit_logs_ibfk_1` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
--- Contraintes pour la table `admin_notifications`
+-- Constraints for table `admin_notifications`
 --
 ALTER TABLE `admin_notifications`
   ADD CONSTRAINT `admin_notifications_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `admin_notifications_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
--- Contraintes pour la table `appointments`
+-- Constraints for table `appointments`
 --
 ALTER TABLE `appointments`
   ADD CONSTRAINT `appointments_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
@@ -1653,27 +1879,27 @@ ALTER TABLE `appointments`
   ADD CONSTRAINT `appointments_ibfk_4` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `appointment_services`
+-- Constraints for table `appointment_services`
 --
 ALTER TABLE `appointment_services`
   ADD CONSTRAINT `appointment_services_ibfk_1` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `appointment_services_ibfk_2` FOREIGN KEY (`service_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT;
 
 --
--- Contraintes pour la table `categories`
+-- Constraints for table `categories`
 --
 ALTER TABLE `categories`
   ADD CONSTRAINT `categories_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `categories_ibfk_2` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `clients`
+-- Constraints for table `clients`
 --
 ALTER TABLE `clients`
   ADD CONSTRAINT `clients_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE;
 
 --
--- Contraintes pour la table `client_debts`
+-- Constraints for table `client_debts`
 --
 ALTER TABLE `client_debts`
   ADD CONSTRAINT `client_debts_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
@@ -1682,14 +1908,14 @@ ALTER TABLE `client_debts`
   ADD CONSTRAINT `client_debts_ibfk_4` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `companies`
+-- Constraints for table `companies`
 --
 ALTER TABLE `companies`
   ADD CONSTRAINT `companies_ibfk_1` FOREIGN KEY (`business_type_id`) REFERENCES `business_types` (`id`) ON DELETE RESTRICT,
   ADD CONSTRAINT `companies_ibfk_2` FOREIGN KEY (`subscription_plan_id`) REFERENCES `subscription_plans` (`id`) ON DELETE RESTRICT;
 
 --
--- Contraintes pour la table `debt_payments`
+-- Constraints for table `debt_payments`
 --
 ALTER TABLE `debt_payments`
   ADD CONSTRAINT `debt_payments_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
@@ -1697,21 +1923,21 @@ ALTER TABLE `debt_payments`
   ADD CONSTRAINT `debt_payments_ibfk_3` FOREIGN KEY (`received_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `employee_schedules`
+-- Constraints for table `employee_schedules`
 --
 ALTER TABLE `employee_schedules`
   ADD CONSTRAINT `employee_schedules_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `employee_schedules_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
--- Contraintes pour la table `expenses`
+-- Constraints for table `expenses`
 --
 ALTER TABLE `expenses`
   ADD CONSTRAINT `expenses_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `expenses_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `inventory_counts`
+-- Constraints for table `inventory_counts`
 --
 ALTER TABLE `inventory_counts`
   ADD CONSTRAINT `inventory_counts_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
@@ -1719,7 +1945,7 @@ ALTER TABLE `inventory_counts`
   ADD CONSTRAINT `inventory_counts_ibfk_3` FOREIGN KEY (`validated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `inventory_count_items`
+-- Constraints for table `inventory_count_items`
 --
 ALTER TABLE `inventory_count_items`
   ADD CONSTRAINT `inventory_count_items_ibfk_1` FOREIGN KEY (`inventory_count_id`) REFERENCES `inventory_counts` (`id`) ON DELETE CASCADE,
@@ -1727,7 +1953,7 @@ ALTER TABLE `inventory_count_items`
   ADD CONSTRAINT `inventory_count_items_ibfk_3` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `inventory_movements`
+-- Constraints for table `inventory_movements`
 --
 ALTER TABLE `inventory_movements`
   ADD CONSTRAINT `inventory_movements_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
@@ -1736,22 +1962,30 @@ ALTER TABLE `inventory_movements`
   ADD CONSTRAINT `inventory_movements_ibfk_4` FOREIGN KEY (`performed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `memberships`
+-- Constraints for table `memberships`
 --
 ALTER TABLE `memberships`
   ADD CONSTRAINT `memberships_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `memberships_ibfk_2` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE;
 
 --
--- Contraintes pour la table `products`
+-- Constraints for table `products`
 --
 ALTER TABLE `products`
+  ADD CONSTRAINT `fk_products_catalog` FOREIGN KEY (`catalog_product_id`) REFERENCES `product_catalog` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `products_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `products_ibfk_3` FOREIGN KEY (`unit_id`) REFERENCES `measurement_units` (`id`) ON DELETE RESTRICT;
 
 --
--- Contraintes pour la table `product_compositions`
+-- Constraints for table `product_catalog`
+--
+ALTER TABLE `product_catalog`
+  ADD CONSTRAINT `fk_product_catalog_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_product_catalog_unit` FOREIGN KEY (`unit_id`) REFERENCES `measurement_units` (`id`) ON DELETE RESTRICT;
+
+--
+-- Constraints for table `product_compositions`
 --
 ALTER TABLE `product_compositions`
   ADD CONSTRAINT `product_compositions_ibfk_1` FOREIGN KEY (`parent_product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
@@ -1759,19 +1993,19 @@ ALTER TABLE `product_compositions`
   ADD CONSTRAINT `product_compositions_ibfk_3` FOREIGN KEY (`unit_id`) REFERENCES `measurement_units` (`id`) ON DELETE RESTRICT;
 
 --
--- Contraintes pour la table `product_variants`
+-- Constraints for table `product_variants`
 --
 ALTER TABLE `product_variants`
   ADD CONSTRAINT `product_variants_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE;
 
 --
--- Contraintes pour la table `restaurant_tables`
+-- Constraints for table `restaurant_tables`
 --
 ALTER TABLE `restaurant_tables`
   ADD CONSTRAINT `restaurant_tables_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE;
 
 --
--- Contraintes pour la table `sales`
+-- Constraints for table `sales`
 --
 ALTER TABLE `sales`
   ADD CONSTRAINT `sales_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
@@ -1779,7 +2013,7 @@ ALTER TABLE `sales`
   ADD CONSTRAINT `sales_ibfk_3` FOREIGN KEY (`seller_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `sale_items`
+-- Constraints for table `sale_items`
 --
 ALTER TABLE `sale_items`
   ADD CONSTRAINT `sale_items_ibfk_1` FOREIGN KEY (`sale_id`) REFERENCES `sales` (`id`) ON DELETE CASCADE,
@@ -1787,7 +2021,7 @@ ALTER TABLE `sale_items`
   ADD CONSTRAINT `sale_items_ibfk_3` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `staff_services`
+-- Constraints for table `staff_services`
 --
 ALTER TABLE `staff_services`
   ADD CONSTRAINT `staff_services_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
@@ -1795,14 +2029,14 @@ ALTER TABLE `staff_services`
   ADD CONSTRAINT `staff_services_ibfk_3` FOREIGN KEY (`service_id`) REFERENCES `products` (`id`) ON DELETE CASCADE;
 
 --
--- Contraintes pour la table `subscription_invoices`
+-- Constraints for table `subscription_invoices`
 --
 ALTER TABLE `subscription_invoices`
   ADD CONSTRAINT `subscription_invoices_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `subscription_invoices_ibfk_2` FOREIGN KEY (`plan_id`) REFERENCES `subscription_plans` (`id`) ON DELETE RESTRICT;
 
 --
--- Contraintes pour la table `subscription_payment_proofs`
+-- Constraints for table `subscription_payment_proofs`
 --
 ALTER TABLE `subscription_payment_proofs`
   ADD CONSTRAINT `subscription_payment_proofs_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
@@ -1811,13 +2045,13 @@ ALTER TABLE `subscription_payment_proofs`
   ADD CONSTRAINT `subscription_payment_proofs_ibfk_4` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `suppliers`
+-- Constraints for table `suppliers`
 --
 ALTER TABLE `suppliers`
   ADD CONSTRAINT `suppliers_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE;
 
 --
--- Contraintes pour la table `supplier_orders`
+-- Constraints for table `supplier_orders`
 --
 ALTER TABLE `supplier_orders`
   ADD CONSTRAINT `supplier_orders_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
@@ -1825,7 +2059,7 @@ ALTER TABLE `supplier_orders`
   ADD CONSTRAINT `supplier_orders_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `supplier_order_items`
+-- Constraints for table `supplier_order_items`
 --
 ALTER TABLE `supplier_order_items`
   ADD CONSTRAINT `supplier_order_items_ibfk_1` FOREIGN KEY (`supplier_order_id`) REFERENCES `supplier_orders` (`id`) ON DELETE CASCADE,
@@ -1833,7 +2067,7 @@ ALTER TABLE `supplier_order_items`
   ADD CONSTRAINT `supplier_order_items_ibfk_3` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `supplier_payments`
+-- Constraints for table `supplier_payments`
 --
 ALTER TABLE `supplier_payments`
   ADD CONSTRAINT `supplier_payments_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
@@ -1842,7 +2076,7 @@ ALTER TABLE `supplier_payments`
   ADD CONSTRAINT `supplier_payments_ibfk_4` FOREIGN KEY (`paid_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `table_sessions`
+-- Constraints for table `table_sessions`
 --
 ALTER TABLE `table_sessions`
   ADD CONSTRAINT `table_sessions_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
@@ -1850,16 +2084,38 @@ ALTER TABLE `table_sessions`
   ADD CONSTRAINT `table_sessions_ibfk_3` FOREIGN KEY (`staff_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `user_password_resets`
+-- Constraints for table `user_password_resets`
 --
 ALTER TABLE `user_password_resets`
   ADD CONSTRAINT `user_password_resets_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
--- Contraintes pour la table `user_sessions`
+-- Constraints for table `user_sessions`
 --
 ALTER TABLE `user_sessions`
   ADD CONSTRAINT `user_sessions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `warehouses`
+--
+ALTER TABLE `warehouses`
+  ADD CONSTRAINT `fk_warehouse_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `warehouse_movements`
+--
+ALTER TABLE `warehouse_movements`
+  ADD CONSTRAINT `fk_wm_catalog_product` FOREIGN KEY (`catalog_product_id`) REFERENCES `product_catalog` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_wm_company` FOREIGN KEY (`destination_company_id`) REFERENCES `companies` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_wm_user` FOREIGN KEY (`performed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_wm_warehouse` FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `warehouse_stocks`
+--
+ALTER TABLE `warehouse_stocks`
+  ADD CONSTRAINT `fk_ws_catalog_product` FOREIGN KEY (`catalog_product_id`) REFERENCES `product_catalog` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_ws_warehouse` FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -382,10 +382,84 @@ const reactivateCompany = async (req, res, next) => {
     }
 };
 
+// ─── CRÉER UNE BOUTIQUE GLOBALE ────────────────────────
+const createCompanyAdmin = async (req, res, next) => {
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const { name, description, country, city, address, phone, business_type_id, subscription_plan_id, owner_id } = req.body;
+        
+        // 1. Generate slug & uuid
+        const slugBase = name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
+        const slug = `${slugBase}-${Date.now()}`;
+        const { v4: uuidv4 } = require('uuid');
+        const uuid = uuidv4();
+
+        // 2. Insert company
+        const [companyResult] = await connection.query(
+            `INSERT INTO companies (uuid, name, slug, description, business_type_id, 
+             subscription_plan_id, subscription_status, subscription_ends_at, country, city, address, phone, is_active)
+             VALUES (?, ?, ?, ?, ?, ?, 'active', NULL, ?, ?, ?, ?, 1)`,
+            [
+                uuid,
+                name,
+                slug,
+                description || null,
+                business_type_id || 1,
+                subscription_plan_id,
+                country || null,
+                city || null,
+                address || null,
+                phone || null,
+            ]
+        );
+        const companyId = companyResult.insertId;
+
+        // 3. Add owner membership
+        await connection.query(
+            `INSERT INTO memberships (user_id, company_id, role, is_active, joined_at)
+             VALUES (?, ?, 'owner', 1, NOW())`,
+            [owner_id, companyId]
+        );
+
+        // 4. Audit Log
+        await connection.query(
+            `INSERT INTO admin_audit_logs (admin_id, action_type, target_type, target_id, details, ip_address)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+                req.user.id,
+                'create_company_admin',
+                'company',
+                companyId,
+                JSON.stringify({ name, owner_id, plan_id: subscription_plan_id }),
+                req.ip,
+            ]
+        );
+
+        await connection.commit();
+
+        res.status(201).json({
+            success: true,
+            message: 'Boutique créée et assignée avec succès.',
+            data: { id: companyId }
+        });
+    } catch (error) {
+        await connection.rollback();
+        next(error);
+    } finally {
+        connection.release();
+    }
+};
+
 module.exports = {
     getAllCompanies,
     getCompanyDetail,
     getCompanyStats,
     suspendCompany,
     reactivateCompany,
+    createCompanyAdmin
 };

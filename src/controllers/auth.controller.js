@@ -59,6 +59,8 @@ const register = async (req, res, next) => {
           last_name,
           email,
           phone: phone || null,
+          has_unlimited_access: false,
+          is_super_admin: false,
         },
         token,
       },
@@ -75,7 +77,7 @@ const login = async (req, res, next) => {
 
     // Chercher par email OU téléphone
     const [users] = await pool.query(
-      'SELECT id, first_name, last_name, email, phone, password_hash, is_active FROM users WHERE email = ? OR phone = ?',
+      'SELECT id, first_name, last_name, email, phone, password_hash, is_active, has_unlimited_access FROM users WHERE email = ? OR phone = ?',
       [login, login]
     );
 
@@ -124,6 +126,7 @@ const login = async (req, res, next) => {
           last_name: user.last_name,
           email: user.email,
           phone: user.phone,
+          has_unlimited_access: user.has_unlimited_access === 1,
           is_super_admin: adminRows.length > 0,
         },
         token,
@@ -138,7 +141,7 @@ const login = async (req, res, next) => {
 const me = async (req, res, next) => {
   try {
     const [users] = await pool.query(
-      'SELECT id, first_name, last_name, email, phone, avatar_url, language, is_active, created_at, last_login_at FROM users WHERE id = ?',
+      'SELECT id, first_name, last_name, email, phone, avatar_url, language, is_active, created_at, last_login_at, has_unlimited_access FROM users WHERE id = ?',
       [req.user.id]
     );
 

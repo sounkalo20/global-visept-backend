@@ -13,10 +13,21 @@ const getAllPlans = async (req, res, next) => {
         (SELECT COUNT(*) FROM companies c WHERE c.subscription_plan_id = sp.id AND c.deleted_at IS NULL) as total_companies,
         (SELECT COUNT(*) FROM companies c WHERE c.subscription_plan_id = sp.id AND c.subscription_status = 'active' AND c.deleted_at IS NULL) as active_companies
       FROM subscription_plans sp
+      WHERE 1=1
     `;
 
+        const [memberships] = await pool.query(
+            'SELECT id FROM memberships WHERE user_id = ? AND role = ? AND is_active = 1',
+            [req.user.id, 'super_admin']
+        );
+        const isSuperAdmin = memberships.length > 0;
+
         if (include_inactive !== 'true') {
-            query += ' WHERE sp.is_active = 1';
+            query += ' AND sp.is_active = 1';
+        }
+
+        if (!isSuperAdmin) {
+            query += ' AND sp.is_admin_only = 0';
         }
 
         query += ' ORDER BY sp.price_monthly ASC';
