@@ -310,3 +310,56 @@ exports.getProductWarehouseStocks = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.searchGlobalProducts = async (req, res, next) => {
+  try {
+    const owner_id = req.user.id;
+    const { q } = req.query;
+
+    if (!q || q.trim().length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const searchTerm = `%${q.trim()}%`;
+    const [products] = await pool.query(
+      `SELECT id as catalog_product_id, name, image_url, barcode, slug 
+       FROM product_catalog 
+       WHERE owner_id = ? AND name LIKE ? AND deleted_at IS NULL
+       ORDER BY name ASC 
+       LIMIT 10`,
+      [owner_id, searchTerm]
+    );
+
+    res.json({
+      success: true,
+      data: products
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getProductWarehouseMovements = async (req, res, next) => {
+  try {
+    const owner_id = req.user.id;
+    const { catalog_product_id } = req.params;
+
+    const [movements] = await pool.query(
+      `SELECT wm.*, w.name as warehouse_name, u.first_name, u.last_name, c.name as destination_company_name
+       FROM warehouse_movements wm
+       JOIN warehouses w ON wm.warehouse_id = w.id
+       LEFT JOIN users u ON wm.performed_by = u.id
+       LEFT JOIN companies c ON wm.destination_company_id = c.id
+       WHERE w.owner_id = ? AND wm.catalog_product_id = ?
+       ORDER BY wm.created_at DESC`,
+      [owner_id, catalog_product_id]
+    );
+
+    res.json({
+      success: true,
+      data: movements
+    });
+  } catch (error) {
+    next(error);
+  }
+};

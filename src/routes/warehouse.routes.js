@@ -8,6 +8,7 @@ router.use(authenticate);
 // Gestion CRUD des entrepôts
 router.post('/', warehouseController.createWarehouse);
 router.get('/', warehouseController.getWarehouses);
+router.get('/search', warehouseController.searchGlobalProducts);
 router.get('/:id', warehouseController.getWarehouse);
 router.put('/:id', warehouseController.updateWarehouse);
 router.delete('/:id', warehouseController.deleteWarehouse);
@@ -16,6 +17,7 @@ router.delete('/:id', warehouseController.deleteWarehouse);
 router.get('/:id/stocks', warehouseController.getWarehouseStocks);
 router.get('/:id/movements', warehouseController.getWarehouseMovements);
 router.get('/product/:catalog_product_id', warehouseController.getProductWarehouseStocks);
+router.get('/product/:catalog_product_id/movements', warehouseController.getProductWarehouseMovements);
 router.post('/:id/transfer', warehouseController.transferToShop);
 
 module.exports = router;
