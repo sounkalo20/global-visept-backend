@@ -182,4 +182,77 @@ const logout = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, me, logout };
+// 🔹 UPDATE PROFILE 🔹
+const updateProfile = async (req, res, next) => {
+  try {
+    const { first_name, last_name, phone } = req.body;
+    const userId = req.user.id;
+
+    if (phone) {
+      const [existingPhone] = await pool.query(
+        'SELECT id FROM users WHERE phone = ? AND id != ?',
+        [phone, userId]
+      );
+      if (existingPhone.length > 0) {
+        throw new AppError('Ce numéro de téléphone est déjà utilisé.', 409);
+      }
+    }
+
+    await pool.query(
+      'UPDATE users SET first_name = ?, last_name = ?, phone = ? WHERE id = ?',
+      [first_name, last_name, phone || null, userId]
+    );
+
+    const [users] = await pool.query(
+      'SELECT id, first_name, last_name, email, phone, is_active, has_unlimited_access, created_at FROM users WHERE id = ?',
+      [userId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Profil mis à jour avec succès.',
+      data: { user: users[0] },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 🔹 UPDATE PASSWORD 🔹
+const updatePassword = async (req, res, next) => {
+  try {
+    const { current_password, new_password } = req.body;
+    const userId = req.user.id;
+
+    const [users] = await pool.query(
+      'SELECT password_hash FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (users.length === 0) {
+      throw new AppError('Utilisateur introuvable.', 404);
+    }
+
+    const isMatch = await bcrypt.compare(current_password, users[0].password_hash);
+    if (!isMatch) {
+      throw new AppError('L\'ancien mot de passe est incorrect.', 401);
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(new_password, salt);
+
+    await pool.query(
+      'UPDATE users SET password_hash = ? WHERE id = ?',
+      [password_hash, userId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Mot de passe mis à jour avec succès.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { register, login, me, logout, updateProfile, updatePassword };
