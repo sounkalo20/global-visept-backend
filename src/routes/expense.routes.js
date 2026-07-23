@@ -26,11 +26,11 @@ router.get("/categories", requireMembership(), getCategories);
 // GET /api/expenses/stats?company_id=X - Statistiques
 router.get("/stats", requireMembership(), getExpenseStats);
 
-// POST /api/expenses - Créer une dépense (owner, manager)
+// POST /api/expenses - Créer une dépense (owner, manager, cashier)
 router.post(
   "/",
   validate(createExpenseSchema),
-  requireMembership(["owner", "manager"]),
+  requireMembership(["owner", "manager", "cashier"]),
   createExpense,
 );
 
@@ -40,11 +40,11 @@ router.get("/", requireMembership(), getExpenses);
 // GET /api/expenses/:id?company_id=X - Détails d'une dépense
 router.get("/:id", requireMembership(), getExpenseById);
 
-// PUT /api/expenses/:id - Modifier une dépense (owner, manager)
+// PUT /api/expenses/:id - Modifier une dépense (owner, manager, cashier)
 router.put(
   "/:id",
   validate(updateExpenseSchema),
-  requireMembership(["owner", "manager"]),
+  requireMembership(["owner", "manager", "cashier"]),
   updateExpense,
 );
 

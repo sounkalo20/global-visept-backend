@@ -58,8 +58,8 @@ const createEmployee = async (req, res, next) => {
     // ou on l'accepte s'il vient du front-end et on vérifie
     const assignedRole = role || 'manager';
 
-    if (assignedRole !== 'manager') {
-      throw new AppError("Pour le moment, seul le rôle 'gérant' est supporté.", 400);
+    if (assignedRole !== 'manager' && assignedRole !== 'cashier') {
+      throw new AppError("Pour le moment, seuls les rôles 'gérant' et 'caissier' sont supportés.", 400);
     }
 
     let userId;
@@ -212,7 +212,7 @@ const updateEmployee = async (req, res, next) => {
     const membershipUpdateFields = [];
     const membershipUpdateValues = [];
     
-    if (role && role === 'manager') {
+    if (role && (role === 'manager' || role === 'cashier')) {
       membershipUpdateFields.push('role = ?');
       membershipUpdateValues.push(role);
     }

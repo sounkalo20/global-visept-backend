@@ -9,10 +9,10 @@ const { createDebtSchema, updateDebtSchema } = require('../validators/debt.valid
 router.use(authenticate);
 
 router.get('/stats', requireMembership(), getDebtStats);
-router.post('/', validate(createDebtSchema), requireMembership(['owner', 'manager']), createDebt);
+router.post('/', validate(createDebtSchema), requireMembership(['owner', 'manager', 'cashier']), createDebt);
 router.get('/', requireMembership(), getDebts);
 router.get('/:id', requireMembership(), getDebtById);
-router.put('/:id', validate(updateDebtSchema), requireMembership(['owner', 'manager']), updateDebt);
-router.post('/:id/cancel', requireMembership(['owner', 'manager']), cancelDebt);
+router.put('/:id', validate(updateDebtSchema), requireMembership(['owner', 'manager', 'cashier']), updateDebt);
+router.post('/:id/cancel', requireMembership(['owner', 'manager', 'cashier']), cancelDebt);
 
 module.exports = router;

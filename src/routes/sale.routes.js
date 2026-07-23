@@ -45,18 +45,18 @@ router.get(
   getSaleById
 );
 
-// PUT /api/sales/:id - Modifier une vente (owner, manager)
+// PUT /api/sales/:id - Modifier une vente (owner, manager, cashier)
 router.put(
   '/:id',
   validate(updateSaleSchema),
-  requireMembership(['owner', 'manager']),
+  requireMembership(['owner', 'manager', 'cashier']),
   updateSale
 );
 
-// POST /api/sales/:id/cancel - Annuler une vente (owner, manager)
+// POST /api/sales/:id/cancel - Annuler une vente (owner, manager, cashier)
 router.post(
   '/:id/cancel',
-  requireMembership(['owner', 'manager']),
+  requireMembership(['owner', 'manager', 'cashier']),
   cancelSale
 );
 
