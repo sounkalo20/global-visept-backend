@@ -200,9 +200,8 @@ exports.transferToShop = async (req, res, next) => {
     if (!product_id || !quantity || quantity <= 0 || !destination_company_id) {
       throw new AppError("Paramètres manquants ou invalides", 400);
     }
-    const catalog_product_id = product_id; // Frontend envoie product_id mais c'est le catalog_product_id
+    const catalog_product_id = product_id;
 
-    // Vérifier l'entrepôt
     const [warehouses] = await connection.query(
       `SELECT id, name FROM warehouses WHERE id = ? AND owner_id = ? AND status = 'active'`,
       [warehouseId, owner_id]
@@ -212,7 +211,6 @@ exports.transferToShop = async (req, res, next) => {
       throw new AppError("Entrepôt introuvable", 404);
     }
 
-    // Vérifier l'entreprise (doit appartenir au même owner)
     const [memberships] = await connection.query(
       `SELECT id FROM memberships WHERE user_id = ? AND company_id = ? AND role = 'owner'`,
       [owner_id, destination_company_id]
@@ -222,7 +220,6 @@ exports.transferToShop = async (req, res, next) => {
       throw new AppError("Vous n'êtes pas propriétaire de cette boutique", 403);
     }
 
-    // Vérifier le stock entrepôt
     const [warehouseStocks] = await connection.query(
       `SELECT id, quantity FROM warehouse_stocks WHERE warehouse_id = ? AND catalog_product_id = ? FOR UPDATE`,
       [warehouseId, catalog_product_id]
@@ -235,13 +232,11 @@ exports.transferToShop = async (req, res, next) => {
     const warehouseStockBefore = parseFloat(warehouseStocks[0].quantity);
     const warehouseStockAfter = warehouseStockBefore - parseFloat(quantity);
 
-    // Mettre à jour le stock entrepôt
     await connection.query(
       `UPDATE warehouse_stocks SET quantity = ? WHERE id = ?`,
       [warehouseStockAfter, warehouseStocks[0].id]
     );
 
-    // Historiser le mouvement entrepôt
     await connection.query(
       `INSERT INTO warehouse_movements 
        (warehouse_id, catalog_product_id, movement_type, quantity, stock_before, stock_after, reference_type, destination_company_id, performed_by, notes)
@@ -249,11 +244,9 @@ exports.transferToShop = async (req, res, next) => {
       [warehouseId, catalog_product_id, -quantity, warehouseStockBefore, warehouseStockAfter, destination_company_id, req.user.id, notes || 'Transfert vers boutique']
     );
 
-    // Vérifier / Créer / Mettre à jour le stock boutique via ProductCatalogService
     const ProductCatalogService = require('../services/ProductCatalogService');
     const { product: shopProduct, isNew } = await ProductCatalogService.getOrCreateShopProduct(destination_company_id, catalog_product_id, connection);
-    
-    // Verrouiller la ligne si elle n'est pas nouvelle pour l'update concurrent (Optionnel si isNew)
+
     const [products] = await connection.query(
       `SELECT id, current_stock FROM products WHERE id = ? FOR UPDATE`,
       [shopProduct.id]
@@ -267,7 +260,6 @@ exports.transferToShop = async (req, res, next) => {
       [shopStockAfter, shopProduct.id]
     );
 
-    // Historiser le mouvement boutique
     await connection.query(
       `INSERT INTO inventory_movements
        (company_id, product_id, movement_type, quantity, stock_before, stock_after, reference_type, note, performed_by)
@@ -359,6 +351,340 @@ exports.getProductWarehouseMovements = async (req, res, next) => {
       success: true,
       data: movements
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── AJUSTEMENT MANUEL DE STOCK DANS UN ENTREPÔT ──────
+exports.adjustWarehouseStock = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const owner_id = req.user.id;
+    const warehouseId = req.params.id;
+    const {
+      catalog_product_id,
+      quantity,
+      reason,
+      notes
+    } = req.body;
+
+    if (!catalog_product_id) {
+      throw new AppError("L'ID du produit catalogue est requis.", 400);
+    }
+
+    if (quantity === undefined || quantity === null || quantity === 0) {
+      throw new AppError("La quantité doit être différente de 0.", 400);
+    }
+
+    if (!reason || reason.trim().length === 0) {
+      throw new AppError("Un motif d'ajustement est requis.", 400);
+    }
+
+    const quantityNum = parseFloat(quantity);
+    if (isNaN(quantityNum)) {
+      throw new AppError("La quantité doit être un nombre valide.", 400);
+    }
+
+    const [warehouses] = await connection.query(
+      `SELECT id, name FROM warehouses WHERE id = ? AND owner_id = ? AND status = 'active'`,
+      [warehouseId, owner_id]
+    );
+
+    if (warehouses.length === 0) {
+      throw new AppError("Entrepôt introuvable ou inactif.", 404);
+    }
+
+    const [catalogProducts] = await connection.query(
+      `SELECT id, name FROM product_catalog WHERE id = ? AND owner_id = ? AND deleted_at IS NULL`,
+      [catalog_product_id, owner_id]
+    );
+
+    if (catalogProducts.length === 0) {
+      throw new AppError("Produit catalogue introuvable.", 404);
+    }
+
+    const [stockRows] = await connection.query(
+      `SELECT id, quantity, reserved_quantity 
+       FROM warehouse_stocks 
+       WHERE warehouse_id = ? AND catalog_product_id = ? 
+       FOR UPDATE`,
+      [warehouseId, catalog_product_id]
+    );
+
+    let stockBefore = 0;
+    let stockId = null;
+
+    if (stockRows.length > 0) {
+      stockBefore = parseFloat(stockRows[0].quantity);
+      stockId = stockRows[0].id;
+    }
+
+    const stockAfter = stockBefore + quantityNum;
+
+    if (quantityNum < 0 && stockAfter < 0) {
+      throw new AppError(
+        `Stock insuffisant. Stock actuel : ${stockBefore}, déduction demandée : ${Math.abs(quantityNum)}`,
+        400
+      );
+    }
+
+    if (stockId) {
+      await connection.query(
+        `UPDATE warehouse_stocks SET quantity = ? WHERE id = ?`,
+        [stockAfter, stockId]
+      );
+    } else {
+      const [result] = await connection.query(
+        `INSERT INTO warehouse_stocks (warehouse_id, catalog_product_id, quantity, reserved_quantity) 
+         VALUES (?, ?, ?, 0)`,
+        [warehouseId, catalog_product_id, stockAfter]
+      );
+      stockId = result.insertId;
+    }
+
+    await connection.query(
+      `INSERT INTO warehouse_movements 
+       (warehouse_id, catalog_product_id, movement_type, quantity, stock_before, stock_after, 
+        reference_type, performed_by, notes)
+       VALUES (?, ?, 'adjustment', ?, ?, ?, 'manual', ?, ?)`,
+      [
+        warehouseId,
+        catalog_product_id,
+        quantityNum,
+        stockBefore,
+        stockAfter,
+        req.user.id,
+        `[${reason}] ${notes || ''}`.trim()
+      ]
+    );
+
+    await connection.commit();
+
+    const [updatedStock] = await connection.query(
+      `SELECT ws.*, p.name as product_name, p.barcode, p.image_url
+       FROM warehouse_stocks ws
+       JOIN product_catalog p ON ws.catalog_product_id = p.id
+       WHERE ws.id = ?`,
+      [stockId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Ajustement de stock effectué avec succès.`,
+      data: {
+        warehouse: warehouses[0].name,
+        product: updatedStock[0],
+        adjustment: {
+          quantity: quantityNum,
+          reason: reason,
+          stock_before: stockBefore,
+          stock_after: stockAfter,
+          notes: notes || null
+        }
+      }
+    });
+
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+};
+
+// ─── RÉCUPÉRER LES MOTIFS D'AJUSTEMENT DISPONIBLES ──
+exports.getAdjustmentReasons = async (req, res, next) => {
+  try {
+    const reasons = [
+      { code: 'STOCK_INITIAL', label: 'Stock initial', type: 'both' },
+      { code: 'INVENTORY_COUNT', label: 'Inventaire physique', type: 'both' },
+      { code: 'DAMAGED', label: 'Produit endommagé', type: 'negative' },
+      { code: 'EXPIRED', label: 'Produit périmé', type: 'negative' },
+      { code: 'LOST', label: 'Perte / Vol', type: 'negative' },
+      { code: 'FOUND', label: 'Produit retrouvé', type: 'positive' },
+      { code: 'RETURN', label: 'Retour produit', type: 'positive' },
+      { code: 'SAMPLE', label: 'Échantillon / Démonstration', type: 'negative' },
+      { code: 'GIFT', label: 'Cadeau / Don', type: 'negative' },
+      { code: 'TRANSFER_ERROR', label: 'Erreur de transfert', type: 'both' },
+      { code: 'MANUAL_CORRECTION', label: 'Correction manuelle', type: 'both' },
+      { code: 'OTHER', label: 'Autre', type: 'both' }
+    ];
+
+    res.status(200).json({
+      success: true,
+      data: reasons
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── RÉCUPÉRER LES AJUSTEMENTS D'UN ENTREPÔT ──────────
+exports.getWarehouseAdjustments = async (req, res, next) => {
+  try {
+    const owner_id = req.user.id;
+    const warehouseId = req.params.id;
+    const {
+      start_date,
+      end_date,
+      reason,
+      page = 1,
+      limit = 50
+    } = req.query;
+
+    const [warehouses] = await pool.query(
+      `SELECT id FROM warehouses WHERE id = ? AND owner_id = ?`,
+      [warehouseId, owner_id]
+    );
+
+    if (warehouses.length === 0) {
+      throw new AppError("Entrepôt introuvable", 404);
+    }
+
+    let query = `
+      SELECT wm.*, 
+             p.name as product_name, 
+             p.barcode, 
+             p.image_url,
+             u.first_name, 
+             u.last_name
+      FROM warehouse_movements wm
+      JOIN product_catalog p ON wm.catalog_product_id = p.id
+      LEFT JOIN users u ON wm.performed_by = u.id
+      WHERE wm.warehouse_id = ? 
+        AND wm.movement_type = 'adjustment'
+    `;
+
+    const queryParams = [warehouseId];
+
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM warehouse_movements
+      WHERE warehouse_id = ? 
+        AND movement_type = 'adjustment'
+    `;
+    const countParams = [warehouseId];
+
+    if (start_date) {
+      query += ` AND DATE(wm.created_at) >= ?`;
+      queryParams.push(start_date);
+      countQuery += ` AND DATE(created_at) >= ?`;
+      countParams.push(start_date);
+    }
+
+    if (end_date) {
+      query += ` AND DATE(wm.created_at) <= ?`;
+      queryParams.push(end_date);
+      countQuery += ` AND DATE(created_at) <= ?`;
+      countParams.push(end_date);
+    }
+
+    if (reason) {
+      query += ` AND wm.notes LIKE ?`;
+      queryParams.push(`%[${reason}]%`);
+      countQuery += ` AND notes LIKE ?`;
+      countParams.push(`%[${reason}]%`);
+    }
+
+    const [countResult] = await pool.query(countQuery, countParams);
+    const total = countResult && countResult[0] ? parseInt(countResult[0].total) : 0;
+
+    query += ` ORDER BY wm.created_at DESC LIMIT ? OFFSET ?`;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    queryParams.push(parseInt(limit), offset);
+
+    const [movements] = await pool.query(query, queryParams);
+
+    res.status(200).json({
+      success: true,
+      data: movements || [],
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: total || 0,
+        pages: total > 0 ? Math.ceil(total / parseInt(limit)) : 1
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── RÉCUPÉRER LES AJUSTEMENTS D'UN PRODUIT SPÉCIFIQUE ──
+exports.getProductAdjustments = async (req, res, next) => {
+  try {
+    const owner_id = req.user.id;
+    const { catalog_product_id } = req.params;
+    const {
+      start_date,
+      end_date,
+      page = 1,
+      limit = 50
+    } = req.query;
+
+    let query = `
+      SELECT wm.*, 
+             w.name as warehouse_name,
+             u.first_name, 
+             u.last_name
+      FROM warehouse_movements wm
+      JOIN warehouses w ON wm.warehouse_id = w.id
+      LEFT JOIN users u ON wm.performed_by = u.id
+      WHERE w.owner_id = ? 
+        AND wm.catalog_product_id = ?
+        AND wm.movement_type = 'adjustment'
+    `;
+
+    const queryParams = [owner_id, catalog_product_id];
+
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM warehouse_movements wm
+      JOIN warehouses w ON wm.warehouse_id = w.id
+      WHERE w.owner_id = ? 
+        AND wm.catalog_product_id = ?
+        AND wm.movement_type = 'adjustment'
+    `;
+    const countParams = [owner_id, catalog_product_id];
+
+    if (start_date) {
+      query += ` AND DATE(wm.created_at) >= ?`;
+      queryParams.push(start_date);
+      countQuery += ` AND DATE(wm.created_at) >= ?`;
+      countParams.push(start_date);
+    }
+
+    if (end_date) {
+      query += ` AND DATE(wm.created_at) <= ?`;
+      queryParams.push(end_date);
+      countQuery += ` AND DATE(wm.created_at) <= ?`;
+      countParams.push(end_date);
+    }
+
+    const [countResult] = await pool.query(countQuery, countParams);
+    const total = countResult && countResult[0] ? parseInt(countResult[0].total) : 0;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const paginatedQuery = query + ` ORDER BY wm.created_at DESC LIMIT ? OFFSET ?`;
+    queryParams.push(parseInt(limit), offset);
+
+    const [movements] = await pool.query(paginatedQuery, queryParams);
+
+    res.status(200).json({
+      success: true,
+      data: movements || [],
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: total || 0,
+        pages: total > 0 ? Math.ceil(total / parseInt(limit)) : 1
+      }
+    });
+
   } catch (error) {
     next(error);
   }
