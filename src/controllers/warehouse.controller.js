@@ -1,6 +1,18 @@
 const pool = require('../config/db');
 const AppError = require('../utils/AppError');
 
+const getOwnerId = async (req) => {
+  const companyId = req.query?.company_id || req.body?.company_id || req.query?.companyId || req.body?.companyId || req.body?.destination_company_id;
+  if (companyId) {
+    const [ownerRows] = await pool.query(
+      "SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1",
+      [companyId]
+    );
+    if (ownerRows.length > 0) return ownerRows[0].user_id;
+  }
+  return req.user.id;
+};
+
 exports.createWarehouse = async (req, res, next) => {
   try {
     const { name, description, address } = req.body;
@@ -27,7 +39,7 @@ exports.createWarehouse = async (req, res, next) => {
 
 exports.getWarehouses = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
 
     const [warehouses] = await pool.query(
       `SELECT * FROM warehouses WHERE owner_id = ? AND status = 'active' ORDER BY created_at DESC`,
@@ -45,7 +57,7 @@ exports.getWarehouses = async (req, res, next) => {
 
 exports.getWarehouse = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
 
     const [warehouses] = await pool.query(
@@ -68,7 +80,7 @@ exports.getWarehouse = async (req, res, next) => {
 
 exports.updateWarehouse = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
     const { name, description, address, status } = req.body;
 
@@ -97,7 +109,7 @@ exports.updateWarehouse = async (req, res, next) => {
 
 exports.deleteWarehouse = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
 
     const [warehouses] = await pool.query(
@@ -125,7 +137,7 @@ exports.deleteWarehouse = async (req, res, next) => {
 
 exports.getWarehouseStocks = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
 
     const [warehouses] = await pool.query(
@@ -156,7 +168,7 @@ exports.getWarehouseStocks = async (req, res, next) => {
 
 exports.getWarehouseMovements = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
 
     const [warehouses] = await pool.query(
@@ -193,7 +205,7 @@ exports.transferToShop = async (req, res, next) => {
   try {
     await connection.beginTransaction();
 
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
     const { product_id, quantity, destination_company_id, notes } = req.body;
 
@@ -283,7 +295,7 @@ exports.transferToShop = async (req, res, next) => {
 
 exports.getProductWarehouseStocks = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const { catalog_product_id } = req.params;
 
     const [stocks] = await pool.query(
@@ -305,7 +317,7 @@ exports.getProductWarehouseStocks = async (req, res, next) => {
 
 exports.searchGlobalProducts = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const { q } = req.query;
 
     if (!q || q.trim().length === 0) {
@@ -333,7 +345,7 @@ exports.searchGlobalProducts = async (req, res, next) => {
 
 exports.getProductWarehouseMovements = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const { catalog_product_id } = req.params;
 
     const [movements] = await pool.query(
@@ -362,7 +374,7 @@ exports.adjustWarehouseStock = async (req, res, next) => {
   try {
     await connection.beginTransaction();
 
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
     const {
       catalog_product_id,
@@ -525,7 +537,7 @@ exports.getAdjustmentReasons = async (req, res, next) => {
 // ─── RÉCUPÉRER LES AJUSTEMENTS D'UN ENTREPÔT ──────────
 exports.getWarehouseAdjustments = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
     const {
       start_date,
@@ -617,7 +629,7 @@ exports.getWarehouseAdjustments = async (req, res, next) => {
 // ─── RÉCUPÉRER LES AJUSTEMENTS D'UN PRODUIT SPÉCIFIQUE ──
 exports.getProductAdjustments = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const { catalog_product_id } = req.params;
     const {
       start_date,
