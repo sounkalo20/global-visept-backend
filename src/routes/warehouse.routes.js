@@ -4,7 +4,11 @@ const router = express.Router();
 const warehouseController = require('../controllers/warehouse.controller');
 const authenticate = require('../middlewares/auth.middleware');
 
+const { ownerSubscriptionContext, requireFeature } = require('../middlewares/subscription.middleware');
+
 router.use(authenticate);
+router.use(ownerSubscriptionContext);
+router.use(requireFeature('module_warehouses'));
 
 // ⚠️ ATTENTION : L'ORDRE EST CRUCIAL !
 // Les routes avec des chemins fixes DOIVENT être avant les routes avec des paramètres dynamiques (:id)

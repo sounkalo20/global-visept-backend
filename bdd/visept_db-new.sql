@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jul 21, 2026 at 03:46 PM
+-- Generation Time: Jul 29, 2026 at 02:20 PM
 -- Server version: 8.4.3
 -- PHP Version: 8.3.30
 
@@ -50,7 +50,10 @@ INSERT INTO `admin_audit_logs` (`id`, `admin_id`, `action_type`, `target_type`, 
 (5, 4, 'update_plan', 'plan', 3, '{\"changes\": {\"code\": \"PREMIUM\", \"name\": \"Premium\", \"features\": {\"reports\": true, \"suppliers\": true, \"api_access\": true, \"promotions\": true, \"advanced_stock\": true}, \"is_active\": 1, \"max_clients\": null, \"max_products\": null, \"price_yearly\": 250000, \"max_employees\": null, \"price_monthly\": 25000}, \"previous\": {\"code\": \"PREMIUM\", \"name\": \"Premium\"}}', '::1', '2026-06-21 23:23:27'),
 (6, 4, 'update_plan', 'plan', 4, '{\"changes\": {\"code\": \"ORG\", \"name\": \"test\", \"features\": {\"reports\": false, \"suppliers\": false, \"api_access\": false, \"promotions\": false, \"advanced_stock\": false}, \"is_active\": 0, \"max_clients\": 5, \"max_products\": 5, \"price_yearly\": 60000, \"max_employees\": 3, \"price_monthly\": 5000}, \"previous\": {\"code\": \"ORG\", \"name\": \"test\"}}', '::1', '2026-06-21 23:25:27'),
 (7, 4, 'activate_plan', 'plan', 4, '{\"code\": \"ORG\", \"name\": \"test\", \"new_status\": true, \"previous_status\": 0}', '::1', '2026-06-21 23:25:34'),
-(8, 4, 'approve_payment', 'subscription', 1, '{\"amount\": \"5000.00\", \"plan_id\": 4, \"plan_name\": \"test\", \"company_id\": 4, \"company_name\": \"kaba_shops\", \"payment_method\": \"mobile_money\", \"subscription_ends_at\": \"2026-07-22T19:43:03.510Z\"}', '::1', '2026-06-22 19:43:03');
+(8, 4, 'approve_payment', 'subscription', 1, '{\"amount\": \"5000.00\", \"plan_id\": 4, \"plan_name\": \"test\", \"company_id\": 4, \"company_name\": \"kaba_shops\", \"payment_method\": \"mobile_money\", \"subscription_ends_at\": \"2026-07-22T19:43:03.510Z\"}', '::1', '2026-06-22 19:43:03'),
+(9, 4, 'grant_unlimited_plan', 'user', 5, '{\"impacted_companies\": 2}', '::1', '2026-07-22 11:05:55'),
+(10, 4, 'create_owner', 'user', 9, '{\"email\": \"ibasoumano@gmail.com\"}', '::1', '2026-07-22 11:12:30'),
+(11, 4, 'grant_unlimited_plan', 'user', 9, '{\"impacted_companies\": 0}', '::1', '2026-07-22 11:12:49');
 
 -- --------------------------------------------------------
 
@@ -287,10 +290,11 @@ INSERT INTO `companies` (`id`, `uuid`, `name`, `slug`, `description`, `logo_url`
 (1, '6e4ab3ae-1e9d-488e-9857-622daf404991', 'sounkalo_shop', 'sounkaloshop', 'vente d\'article electronique ', NULL, 1, 1, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '828632060', '{}', 1, '2026-05-18 14:47:47', '2026-05-18 14:47:47', NULL, NULL, NULL, NULL, NULL, 0, NULL),
 (2, 'a04f9d8c-380e-4212-9537-7481989b04ef', 'isac_electro', 'isac-electro-1779202532604', 'electronique de chez isac ', 'http://localhost:5000/uploads/companies/company-1779202532562-781311330.jpg', 1, 1, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '+2238286320600', NULL, 1, '2026-05-19 14:55:32', '2026-05-19 14:55:32', NULL, NULL, NULL, NULL, NULL, 0, NULL),
 (3, '73755149-c9b0-400f-988e-1ff4f0279d23', 'mobilier_chez_isac', 'mobilier-chez-isac-1779202948386', 'vente de mobilier de bureau', 'http://localhost:5000/uploads/companies/company-1779202948369-40338303.png', 1, 1, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '+2238286320600', NULL, 1, '2026-05-19 15:02:28', '2026-05-19 15:02:28', NULL, NULL, NULL, NULL, NULL, 0, NULL),
-(4, 'd3fc9b91-b2e5-47f0-b909-bca66ec2b1fc', 'kaba_shops', 'kaba-shops-1782149770861', 'vente d\'articles ', NULL, 1, 4, 'active', '2026-07-22 21:43:04', 'Mali', 'Bamako', 'Bamako', '000000067', NULL, 1, '2026-06-22 00:42:50', '2026-06-22 19:43:03', NULL, NULL, '2026-06-22 21:43:03', NULL, NULL, 0, NULL),
-(5, '33353811-3383-49ab-be2b-90a31a617fab', 'kaba_restau', 'kaba-restau-1782216374418', 'aucune', NULL, 3, 1, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '+2238289999', NULL, 1, '2026-06-23 12:06:14', '2026-06-23 12:06:14', NULL, NULL, NULL, NULL, NULL, 0, NULL),
+(4, 'd3fc9b91-b2e5-47f0-b909-bca66ec2b1fc', 'kaba_shops', 'kaba-shops-1782149770861', 'vente d\'articles ', NULL, 1, 5, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '000000067', NULL, 1, '2026-06-22 00:42:50', '2026-07-22 11:05:55', NULL, NULL, '2026-06-22 21:43:03', NULL, NULL, 0, NULL),
+(5, '33353811-3383-49ab-be2b-90a31a617fab', 'kaba_restau', 'kaba-restau-1782216374418', 'aucune', NULL, 3, 5, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '+2238289999', NULL, 1, '2026-06-23 12:06:14', '2026-07-22 11:05:55', NULL, NULL, NULL, NULL, NULL, 0, NULL),
 (6, 'f015513e-40b9-41d8-b760-c00c708686ad', 'Djessy ', 'djessy-1782307996307', NULL, NULL, 3, 1, 'active', NULL, 'Mali', 'Bamako ', '123', '72122412', NULL, 1, '2026-06-24 13:33:16', '2026-06-24 13:33:16', NULL, NULL, NULL, NULL, NULL, 0, NULL),
-(7, '23852cc8-4a5c-4993-bc08-f0fd7e1fe203', 'ib_dollars', 'ib-dollars-1783956353971', 'entreprise de vente de materiel ', NULL, 1, 1, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '+22382863000', NULL, 1, '2026-07-13 15:25:54', '2026-07-13 15:25:54', NULL, NULL, NULL, NULL, NULL, 0, NULL);
+(7, '23852cc8-4a5c-4993-bc08-f0fd7e1fe203', 'ib_dollars', 'ib-dollars-1783956353971', 'entreprise de vente de materiel ', NULL, 1, 1, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '+22382863000', NULL, 1, '2026-07-13 15:25:54', '2026-07-13 15:25:54', NULL, NULL, NULL, NULL, NULL, 0, NULL),
+(8, '5618099e-ab63-4c21-b1d8-d88e443aeb68', 'iba_shop', 'iba-shop-1784718832710', 'ma boutique cool', NULL, 1, 5, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '+223828632064', NULL, 1, '2026-07-22 11:13:52', '2026-07-22 11:13:52', NULL, NULL, NULL, NULL, NULL, 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -429,7 +433,7 @@ CREATE TABLE `inventory_movements` (
   `company_id` bigint UNSIGNED NOT NULL,
   `product_id` bigint UNSIGNED NOT NULL,
   `variant_id` bigint UNSIGNED DEFAULT NULL,
-  `movement_type` enum('purchase','sale','return_customer','return_supplier','adjustment','loss','expiry','transfer_in','transfer_out','production','consumption') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `movement_type` enum('purchase','sale','return_customer','return_supplier','adjustment','loss','expiry','transfer_in','transfer_out','production','consumption','return_defective') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `quantity` decimal(12,3) NOT NULL COMMENT 'Positif=entrée, Négatif=sortie',
   `stock_before` decimal(12,3) NOT NULL,
   `stock_after` decimal(12,3) NOT NULL,
@@ -473,7 +477,14 @@ INSERT INTO `inventory_movements` (`id`, `company_id`, `product_id`, `variant_id
 (25, 4, 7, NULL, 'transfer_in', 20.000, 60.000, 80.000, 'warehouse_transfer', NULL, NULL, 'Réception depuis entrepôt entrepot principal', 5, '2026-07-21 14:54:06'),
 (26, 4, 7, NULL, 'purchase', 5.000, 80.000, 85.000, NULL, NULL, 5000.00, 'Ajustement manuel', 5, '2026-07-21 15:14:18'),
 (27, 4, 7, NULL, 'purchase', 20.000, 85.000, 105.000, NULL, NULL, 5000.00, 'Ajustement manuel', 5, '2026-07-21 15:14:31'),
-(28, 4, 7, NULL, 'purchase', 10.000, 105.000, 115.000, NULL, NULL, 5000.00, 'Ajustement manuel', 5, '2026-07-21 15:14:43');
+(28, 4, 7, NULL, 'purchase', 10.000, 105.000, 115.000, NULL, NULL, 5000.00, 'Ajustement manuel', 5, '2026-07-21 15:14:43'),
+(29, 4, 7, NULL, 'sale', -10.000, 115.000, 105.000, 'sale', 18, 5000.00, NULL, 5, '2026-07-21 16:44:49'),
+(30, 4, 7, NULL, 'return_customer', 5.000, 105.000, 110.000, 'sale', 18, 5000.00, NULL, 5, '2026-07-21 16:53:31'),
+(31, 4, 7, NULL, 'return_customer', 1.000, 110.000, 111.000, 'sale', 18, 5000.00, NULL, 5, '2026-07-22 16:32:20'),
+(32, 4, 3, NULL, 'sale', -2.000, 9.000, 7.000, 'sale', 19, 200000.00, NULL, 5, '2026-07-22 16:38:31'),
+(33, 4, 3, NULL, 'return_customer', 1.000, 7.000, 8.000, 'sale', 19, 200000.00, NULL, 5, '2026-07-22 16:38:50'),
+(34, 4, 7, NULL, 'sale', -1.000, 111.000, 110.000, 'sale', 20, 5000.00, NULL, 10, '2026-07-23 10:38:01'),
+(35, 4, 3, NULL, 'sale', -1.000, 8.000, 7.000, 'sale', 21, 200000.00, NULL, 10, '2026-07-23 10:58:15');
 
 -- --------------------------------------------------------
 
@@ -534,7 +545,11 @@ INSERT INTO `memberships` (`id`, `user_id`, `company_id`, `role`, `custom_permis
 (5, 5, 4, 'owner', NULL, NULL, NULL, '2026-06-22 02:42:50', 1, '2026-06-22 00:42:50', '2026-06-22 00:42:50'),
 (6, 5, 5, 'owner', NULL, NULL, NULL, '2026-06-23 14:06:14', 1, '2026-06-23 12:06:14', '2026-06-23 12:06:14'),
 (7, 6, 6, 'owner', NULL, NULL, NULL, '2026-06-24 13:33:16', 1, '2026-06-24 13:33:16', '2026-06-24 13:33:16'),
-(8, 7, 7, 'owner', NULL, NULL, NULL, '2026-07-13 15:25:54', 1, '2026-07-13 15:25:54', '2026-07-13 15:25:54');
+(8, 7, 7, 'owner', NULL, NULL, NULL, '2026-07-13 15:25:54', 1, '2026-07-13 15:25:54', '2026-07-13 15:25:54'),
+(9, 8, 4, 'manager', NULL, NULL, NULL, '2026-07-21 19:36:27', 1, '2026-07-21 19:36:27', '2026-07-21 19:36:27'),
+(10, 9, 8, 'owner', NULL, NULL, NULL, '2026-07-22 11:13:52', 1, '2026-07-22 11:13:52', '2026-07-22 11:13:52'),
+(11, 10, 4, 'cashier', NULL, NULL, NULL, '2026-07-23 10:24:54', 1, '2026-07-23 10:24:54', '2026-07-23 10:24:54'),
+(12, 15, 8, 'manager', NULL, NULL, NULL, '2026-07-28 11:44:37', 1, '2026-07-28 11:44:37', '2026-07-28 11:44:37');
 
 -- --------------------------------------------------------
 
@@ -578,11 +593,14 @@ CREATE TABLE `products` (
 INSERT INTO `products` (`id`, `company_id`, `catalog_product_id`, `category_id`, `unit_id`, `name`, `slug`, `description`, `ingredients_text`, `barcode`, `sku`, `cost_price`, `retail_price`, `wholesale_price`, `wholesale_min_qty`, `allow_custom_price`, `product_type`, `manage_stock`, `current_stock`, `low_stock_threshold`, `is_active`, `is_available`, `image_url`, `created_at`, `updated_at`, `deleted_at`) VALUES
 (1, 2, NULL, 1, 1, 'produit test 1', 'produit-test-1-1779223077159', 'aucune', NULL, '2000247821435', 'AMP-PDFB0B', 10000.00, 11000.00, 10500.00, 5, 0, 'product', 1, 20.000, 10.000, 1, 1, 'http://localhost:5000/uploads/products/product-1779223077128-544221727.png', '2026-05-19 20:37:57', '2026-05-19 20:59:37', '2026-05-19 22:59:37'),
 (2, 2, NULL, 1, 1, 'produit test 2', 'produit-test-2-1779224262083', 'day 2 day ', NULL, '2000502621138', 'AMP-PDFB0C', 7500.00, 8500.00, 8000.00, 5, 0, 'product', 1, 24.000, 10.000, 1, 1, NULL, '2026-05-19 20:57:42', '2026-05-21 11:51:29', NULL),
-(3, 4, 3, 4, 1, 'iphone 13 pro', 'iphone-13-pro-1782133776087', 'telephone de marque apple', NULL, '', '', 200000.00, 200000.00, 195000.00, 1, 0, 'product', 1, 9.000, 4.000, 1, 1, NULL, '2026-06-22 12:46:09', '2026-07-21 14:59:43', NULL),
+(3, 4, 3, 4, 1, 'iphone 13 pro', 'iphone-13-pro-1782133776087', 'telephone de marque apple', NULL, '', '', 200000.00, 200000.00, 195000.00, 1, 0, 'product', 1, 7.000, 4.000, 1, 1, NULL, '2026-06-22 12:46:09', '2026-07-23 10:58:15', NULL),
 (4, 4, NULL, 4, 1, 'ordinateur', 'ordinateur-1782133887203', 'ordi', NULL, NULL, NULL, 170000.00, 200000.00, 195000.00, 1, 0, 'product', 1, 97.000, 1.000, 1, 1, NULL, '2026-06-22 13:11:27', '2026-06-22 21:38:28', NULL),
 (5, 5, NULL, 5, 7, 'plat1-test', 'plat1-test-1782226978271', NULL, 'riz , viande , frittes', NULL, NULL, 0.00, 2000.00, 0.00, 1, 0, 'dish', 0, 0.000, 10.000, 1, 1, NULL, '2026-06-23 15:01:40', '2026-06-23 15:02:58', NULL),
 (6, 4, 2, 4, 1, 'iphone 14 pro', 'iphone-14-pro-1782250821426', 'aucune', NULL, NULL, NULL, 250000.00, 2500000.00, 245000.00, 1, 0, 'product', 1, 20.000, 10.000, 1, 1, 'http://global-visept-backend.onrender.com/uploads/products/product-1782250788984-669583536.png', '2026-06-23 21:39:49', '2026-07-21 14:59:42', NULL),
-(7, 4, 1, 4, 1, 'test3', 'test3-1784645195182', 'mon produit cool', NULL, NULL, NULL, 5000.00, 7500.00, 7000.00, 10, 0, 'product', 1, 115.000, 5.000, 1, 1, NULL, '2026-07-21 14:46:11', '2026-07-21 15:14:43', NULL);
+(7, 4, 1, 4, 1, 'test3', 'test3-1784645195182', 'mon produit cool', NULL, NULL, NULL, 5000.00, 7500.00, 7000.00, 10, 0, 'product', 1, 110.000, 5.000, 1, 1, NULL, '2026-07-21 14:46:11', '2026-07-23 10:38:01', NULL),
+(8, 8, 4, NULL, 1, 'tes', 'tes-1785239513531', 'werty', NULL, NULL, 'we456', 600.00, 800.00, 700.00, 1, 0, 'product', 1, 1000.000, 10.000, 1, 1, NULL, '2026-07-28 11:51:53', '2026-07-28 11:51:53', NULL),
+(9, 8, NULL, NULL, 1, 'rizs', 'rizs-1785283878160', 'aucune', NULL, NULL, NULL, 18000.00, 21000.00, 20000.00, 1, 0, 'product', 1, 250.000, 10.000, 1, 1, NULL, '2026-07-29 00:10:45', '2026-07-29 00:19:38', '2026-07-29 00:19:38'),
+(10, 8, 6, NULL, 1, 'rizs', 'rizs-1785284450150', NULL, NULL, NULL, NULL, 18000.00, 20000.00, 19000.00, 1, 0, 'product', 1, 100.000, 10.000, 1, 1, NULL, '2026-07-29 00:20:33', '2026-07-29 00:20:50', NULL);
 
 -- --------------------------------------------------------
 
@@ -612,7 +630,9 @@ CREATE TABLE `product_catalog` (
 INSERT INTO `product_catalog` (`id`, `owner_id`, `name`, `slug`, `barcode`, `description`, `image_url`, `unit_id`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
 (1, 5, 'test3', 'test3', NULL, 'mon produit cool', NULL, 1, 1, '2026-07-21 14:46:11', '2026-07-21 14:46:11', NULL),
 (2, 5, 'iphone 14 pro', 'iphone-14-pro', NULL, 'aucune', 'http://global-visept-backend.onrender.com/uploads/products/product-1782250788984-669583536.png', 1, 1, '2026-07-21 14:59:42', '2026-07-21 14:59:42', NULL),
-(3, 5, 'iphone 13 pro', 'iphone-13-pro', NULL, 'telephone de marque apple', NULL, 1, 1, '2026-07-21 14:59:43', '2026-07-21 14:59:43', NULL);
+(3, 5, 'iphone 13 pro', 'iphone-13-pro', NULL, 'telephone de marque apple', NULL, 1, 1, '2026-07-21 14:59:43', '2026-07-21 14:59:43', NULL),
+(4, 9, 'tes', 'tes', NULL, 'werty', NULL, 1, 1, '2026-07-28 11:51:53', '2026-07-28 11:51:53', NULL),
+(6, 9, 'rizs', 'riz', NULL, NULL, NULL, 1, 1, '2026-07-29 00:20:33', '2026-07-29 00:20:50', NULL);
 
 -- --------------------------------------------------------
 
@@ -692,6 +712,7 @@ CREATE TABLE `sales` (
   `discount_value` decimal(12,2) DEFAULT NULL,
   `tax_amount` decimal(12,2) DEFAULT '0.00',
   `total_amount` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `returned_amount` decimal(12,2) DEFAULT '0.00',
   `payment_status` enum('paid','partial','unpaid','debt') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'paid',
   `amount_paid` decimal(12,2) DEFAULT '0.00',
   `amount_due` decimal(12,2) DEFAULT '0.00',
@@ -712,24 +733,28 @@ CREATE TABLE `sales` (
 -- Dumping data for table `sales`
 --
 
-INSERT INTO `sales` (`id`, `company_id`, `sale_number`, `client_id`, `client_name`, `subtotal`, `discount_amount`, `discount_type`, `discount_value`, `tax_amount`, `total_amount`, `payment_status`, `amount_paid`, `amount_due`, `payment_method`, `payment_reference`, `status`, `cancel_reason`, `table_id`, `table_session_id`, `seller_id`, `notes`, `sale_date`, `created_at`, `updated_at`) VALUES
-(1, 2, 'VTE-202605-00001', NULL, NULL, 17000.00, 500.00, 'fixed', 500.00, 0.00, 16500.00, 'debt', 0.00, 16500.00, 'cash', NULL, 'canceled', 'Annulation manuelle', NULL, NULL, 2, NULL, '2026-05-20 13:16:33', '2026-05-20 11:16:33', '2026-05-20 11:17:07'),
-(2, 2, 'VTE-202605-00002', NULL, NULL, 25500.00, 1000.00, 'fixed', 1000.00, 0.00, 24500.00, 'paid', 24500.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-20 13:20:37', '2026-05-20 11:20:37', '2026-05-20 11:20:37'),
-(3, 2, 'VTE-202605-00003', NULL, NULL, 30000.00, 3000.00, 'percentage', 10.00, 0.00, 27000.00, 'paid', 27000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-20 13:22:21', '2026-05-20 11:22:21', '2026-05-20 13:28:08'),
-(4, 2, 'VTE-202605-00004', NULL, NULL, 25500.00, 500.00, 'fixed', 500.00, 0.00, 25000.00, 'debt', 20000.00, 5000.00, 'cash', NULL, 'canceled', 'Annulation manuelle', NULL, NULL, 2, NULL, '2026-05-20 15:47:39', '2026-05-20 13:47:39', '2026-05-20 13:48:43'),
-(5, 2, 'VTE-202605-00005', NULL, NULL, 25500.00, 500.00, 'fixed', 500.00, 0.00, 25000.00, 'paid', 25000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-20 17:15:58', '2026-05-20 15:15:58', '2026-05-20 15:15:58'),
-(6, 2, 'VTE-202605-00006', 1, 'Gabriel toure', 20000.00, 0.00, 'none', NULL, 0.00, 20000.00, 'paid', 20000.00, 0.00, 'mobile_money', NULL, 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-20 23:02:19', '2026-05-20 21:02:19', '2026-05-20 21:02:19'),
-(7, 2, 'VTE-202605-00007', 1, NULL, 20000.00, 0.00, 'none', NULL, 0.00, 20000.00, 'debt', 0.00, 20000.00, 'cash', 'completed', NULL, NULL, NULL, NULL, 2, NULL, '2026-05-21 12:57:01', '2026-05-21 10:57:01', '2026-05-21 10:57:01'),
-(8, 2, 'VTE-202605-00008', 2, NULL, 34000.00, 0.00, 'none', NULL, 0.00, 34000.00, 'debt', 0.00, 34000.00, 'cash', 'completed', NULL, NULL, NULL, NULL, 2, NULL, '2026-05-21 12:59:17', '2026-05-21 10:59:17', '2026-05-21 10:59:17'),
-(9, 2, 'VTE-202605-00009', 2, NULL, 34000.00, 0.00, 'none', NULL, 0.00, 34000.00, 'debt', 0.00, 34000.00, 'cash', 'completed', NULL, NULL, NULL, NULL, 2, NULL, '2026-05-21 13:01:45', '2026-05-21 11:01:45', '2026-05-21 11:01:45'),
-(10, 2, 'VTE-202605-00010', 1, NULL, 45000.00, 0.00, 'none', NULL, 0.00, 45000.00, 'debt', 0.00, 45000.00, 'cash', 'completed', NULL, NULL, NULL, NULL, 2, NULL, '2026-05-21 13:43:55', '2026-05-21 11:43:55', '2026-05-21 11:43:55'),
-(11, 2, 'VTE-202605-00011', 3, NULL, 8500.00, 500.00, 'fixed', 500.00, 0.00, 8000.00, 'debt', 4000.00, 4000.00, 'cash', 'completed', NULL, NULL, NULL, NULL, 2, NULL, '2026-05-21 13:51:29', '2026-05-21 11:51:29', '2026-05-21 11:51:29'),
-(12, 4, 'VTE-202606-00001', NULL, NULL, 300000.00, 10000.00, 'fixed', 10000.00, 0.00, 290000.00, 'paid', 290000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 5, NULL, '2026-06-22 22:21:52', '2026-06-22 20:21:52', '2026-06-22 20:21:52'),
-(13, 4, 'VTE-202606-00002', NULL, 'isac', 200000.00, 0.00, 'none', NULL, 0.00, 200000.00, 'paid', 200000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 5, NULL, '2026-06-22 23:15:22', '2026-06-22 21:15:22', '2026-06-22 21:15:22'),
-(14, 4, 'VTE-202606-00003', 4, NULL, 200000.00, 0.00, 'none', NULL, 0.00, 200000.00, 'debt', 50000.00, 150000.00, 'cash', 'completed', NULL, NULL, NULL, NULL, 5, NULL, '2026-06-22 23:31:44', '2026-06-22 21:31:44', '2026-06-22 21:31:44'),
-(15, 4, 'VTE-202606-00004', 4, NULL, 500000.00, 20000.00, 'fixed', 20000.00, 0.00, 480000.00, 'debt', 250000.00, 230000.00, 'cash', 'completed', NULL, NULL, NULL, NULL, 5, NULL, '2026-06-22 23:38:28', '2026-06-22 21:38:28', '2026-06-22 21:38:28'),
-(16, 5, 'RES-202606-00001', NULL, NULL, 6000.00, 0.00, 'none', NULL, 0.00, 6000.00, 'paid', 6000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 5, NULL, '2026-06-23 17:34:56', '2026-06-23 15:34:56', '2026-06-23 15:36:16'),
-(17, 5, 'VTE-202606-00001', 5, NULL, 10000.00, 0.00, 'none', NULL, 0.00, 10000.00, 'debt', 3000.00, 7000.00, 'cash', 'completed', NULL, NULL, NULL, NULL, 5, NULL, '2026-06-23 18:53:10', '2026-06-23 16:53:10', '2026-06-23 16:53:10');
+INSERT INTO `sales` (`id`, `company_id`, `sale_number`, `client_id`, `client_name`, `subtotal`, `discount_amount`, `discount_type`, `discount_value`, `tax_amount`, `total_amount`, `returned_amount`, `payment_status`, `amount_paid`, `amount_due`, `payment_method`, `payment_reference`, `status`, `cancel_reason`, `table_id`, `table_session_id`, `seller_id`, `notes`, `sale_date`, `created_at`, `updated_at`) VALUES
+(1, 2, 'VTE-202605-00001', NULL, NULL, 17000.00, 500.00, 'fixed', 500.00, 0.00, 16500.00, 0.00, 'debt', 0.00, 16500.00, 'cash', NULL, 'canceled', 'Annulation manuelle', NULL, NULL, 2, NULL, '2026-05-20 13:16:33', '2026-05-20 11:16:33', '2026-05-20 11:17:07'),
+(2, 2, 'VTE-202605-00002', NULL, NULL, 25500.00, 1000.00, 'fixed', 1000.00, 0.00, 24500.00, 0.00, 'paid', 24500.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-20 13:20:37', '2026-05-20 11:20:37', '2026-05-20 11:20:37'),
+(3, 2, 'VTE-202605-00003', NULL, NULL, 30000.00, 3000.00, 'percentage', 10.00, 0.00, 27000.00, 0.00, 'paid', 27000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-20 13:22:21', '2026-05-20 11:22:21', '2026-05-20 13:28:08'),
+(4, 2, 'VTE-202605-00004', NULL, NULL, 25500.00, 500.00, 'fixed', 500.00, 0.00, 25000.00, 0.00, 'debt', 20000.00, 5000.00, 'cash', NULL, 'canceled', 'Annulation manuelle', NULL, NULL, 2, NULL, '2026-05-20 15:47:39', '2026-05-20 13:47:39', '2026-05-20 13:48:43'),
+(5, 2, 'VTE-202605-00005', NULL, NULL, 25500.00, 500.00, 'fixed', 500.00, 0.00, 25000.00, 0.00, 'paid', 25000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-20 17:15:58', '2026-05-20 15:15:58', '2026-05-20 15:15:58'),
+(6, 2, 'VTE-202605-00006', 1, 'Gabriel toure', 20000.00, 0.00, 'none', NULL, 0.00, 20000.00, 0.00, 'paid', 20000.00, 0.00, 'mobile_money', NULL, 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-20 23:02:19', '2026-05-20 21:02:19', '2026-05-20 21:02:19'),
+(7, 2, 'VTE-202605-00007', 1, NULL, 20000.00, 0.00, 'none', NULL, 0.00, 20000.00, 0.00, 'debt', 0.00, 20000.00, 'cash', 'completed', 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-21 12:57:01', '2026-05-21 10:57:01', '2026-07-22 15:55:52'),
+(8, 2, 'VTE-202605-00008', 2, NULL, 34000.00, 0.00, 'none', NULL, 0.00, 34000.00, 0.00, 'debt', 0.00, 34000.00, 'cash', 'completed', 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-21 12:59:17', '2026-05-21 10:59:17', '2026-07-22 15:55:52'),
+(9, 2, 'VTE-202605-00009', 2, NULL, 34000.00, 0.00, 'none', NULL, 0.00, 34000.00, 0.00, 'debt', 0.00, 34000.00, 'cash', 'completed', 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-21 13:01:45', '2026-05-21 11:01:45', '2026-07-22 15:55:52'),
+(10, 2, 'VTE-202605-00010', 1, NULL, 45000.00, 0.00, 'none', NULL, 0.00, 45000.00, 0.00, 'debt', 0.00, 45000.00, 'cash', 'completed', 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-21 13:43:55', '2026-05-21 11:43:55', '2026-07-22 15:55:52'),
+(11, 2, 'VTE-202605-00011', 3, NULL, 8500.00, 500.00, 'fixed', 500.00, 0.00, 8000.00, 0.00, 'debt', 4000.00, 4000.00, 'cash', 'completed', 'completed', NULL, NULL, NULL, 2, NULL, '2026-05-21 13:51:29', '2026-05-21 11:51:29', '2026-07-22 15:55:52'),
+(12, 4, 'VTE-202606-00001', NULL, NULL, 300000.00, 10000.00, 'fixed', 10000.00, 0.00, 290000.00, 0.00, 'paid', 290000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 5, NULL, '2026-06-22 22:21:52', '2026-06-22 20:21:52', '2026-06-22 20:21:52'),
+(13, 4, 'VTE-202606-00002', NULL, 'isac', 200000.00, 0.00, 'none', NULL, 0.00, 200000.00, 0.00, 'paid', 200000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 5, NULL, '2026-06-22 23:15:22', '2026-06-22 21:15:22', '2026-06-22 21:15:22'),
+(14, 4, 'VTE-202606-00003', 4, NULL, 200000.00, 0.00, 'none', NULL, 0.00, 200000.00, 0.00, 'debt', 50000.00, 150000.00, 'cash', 'completed', 'completed', NULL, NULL, NULL, 5, NULL, '2026-06-22 23:31:44', '2026-06-22 21:31:44', '2026-07-22 15:55:52'),
+(15, 4, 'VTE-202606-00004', 4, NULL, 500000.00, 20000.00, 'fixed', 20000.00, 0.00, 480000.00, 0.00, 'debt', 250000.00, 230000.00, 'cash', 'completed', 'completed', NULL, NULL, NULL, 5, NULL, '2026-06-22 23:38:28', '2026-06-22 21:38:28', '2026-07-22 15:55:52'),
+(16, 5, 'RES-202606-00001', NULL, NULL, 6000.00, 0.00, 'none', NULL, 0.00, 6000.00, 0.00, 'paid', 6000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 5, NULL, '2026-06-23 17:34:56', '2026-06-23 15:34:56', '2026-06-23 15:36:16'),
+(17, 5, 'VTE-202606-00001', 5, NULL, 10000.00, 0.00, 'none', NULL, 0.00, 10000.00, 0.00, 'debt', 3000.00, 7000.00, 'cash', 'completed', 'completed', NULL, NULL, NULL, 5, NULL, '2026-06-23 18:53:10', '2026-06-23 16:53:10', '2026-07-22 15:55:52'),
+(18, 4, 'VTE-202607-00001', NULL, NULL, 75000.00, 0.00, 'none', NULL, 0.00, 75000.00, 45000.00, 'paid', 75000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 5, NULL, '2026-07-21 16:44:49', '2026-07-21 16:44:49', '2026-07-22 16:32:20'),
+(19, 4, 'VTE-202607-00002', NULL, NULL, 400000.00, 0.00, 'none', NULL, 0.00, 400000.00, 200000.00, 'paid', 400000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 5, NULL, '2026-07-22 16:38:31', '2026-07-22 16:38:31', '2026-07-22 16:38:50'),
+(20, 4, 'VTE-202607-00003', NULL, NULL, 7500.00, 0.00, 'none', NULL, 0.00, 7500.00, 0.00, 'paid', 7500.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 10, NULL, '2026-07-23 10:38:01', '2026-07-23 10:38:01', '2026-07-23 10:38:01'),
+(21, 4, 'VTE-202607-00004', NULL, NULL, 200000.00, 0.00, 'none', NULL, 0.00, 200000.00, 0.00, 'paid', 200000.00, 0.00, 'cash', NULL, 'completed', NULL, NULL, NULL, 10, NULL, '2026-07-23 10:58:15', '2026-07-23 10:58:15', '2026-07-23 10:58:15');
 
 -- --------------------------------------------------------
 
@@ -776,7 +801,67 @@ INSERT INTO `sale_items` (`id`, `sale_id`, `product_id`, `variant_id`, `quantity
 (16, 14, 3, NULL, 1.000, 'retail', 200000.00, 200000.00, 195000.00, 200000.00, 0.00, 140000.00, NULL, NULL, '2026-06-22 21:31:44'),
 (17, 15, 4, NULL, 1.000, 'retail', 500000.00, 200000.00, 195000.00, 500000.00, 0.00, 170000.00, NULL, NULL, '2026-06-22 21:38:28'),
 (19, 16, 5, NULL, 3.000, 'retail', 2000.00, 2000.00, 0.00, 6000.00, 0.00, 0.00, NULL, NULL, '2026-06-23 15:36:16'),
-(20, 17, 5, NULL, 5.000, 'retail', 2000.00, 2000.00, 0.00, 10000.00, 0.00, 0.00, NULL, NULL, '2026-06-23 16:53:11');
+(20, 17, 5, NULL, 5.000, 'retail', 2000.00, 2000.00, 0.00, 10000.00, 0.00, 0.00, NULL, NULL, '2026-06-23 16:53:11'),
+(21, 18, 7, NULL, 10.000, 'retail', 7500.00, 7500.00, 7000.00, 75000.00, 0.00, 5000.00, NULL, NULL, '2026-07-21 16:44:49'),
+(22, 19, 3, NULL, 2.000, 'retail', 200000.00, 200000.00, 195000.00, 400000.00, 0.00, 200000.00, NULL, NULL, '2026-07-22 16:38:31'),
+(23, 20, 7, NULL, 1.000, 'retail', 7500.00, 7500.00, 7000.00, 7500.00, 0.00, 5000.00, NULL, NULL, '2026-07-23 10:38:01'),
+(24, 21, 3, NULL, 1.000, 'retail', 200000.00, 200000.00, 195000.00, 200000.00, 0.00, 200000.00, NULL, NULL, '2026-07-23 10:58:15');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sale_returns`
+--
+
+CREATE TABLE `sale_returns` (
+  `id` bigint UNSIGNED NOT NULL,
+  `company_id` bigint UNSIGNED NOT NULL,
+  `sale_id` bigint UNSIGNED NOT NULL,
+  `return_number` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `total_amount_returned` decimal(12,2) NOT NULL DEFAULT '0.00',
+  `created_by` bigint UNSIGNED DEFAULT NULL,
+  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `sale_returns`
+--
+
+INSERT INTO `sale_returns` (`id`, `company_id`, `sale_id`, `return_number`, `total_amount_returned`, `created_by`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 4, 18, 'RET-202607-00001', 37500.00, 5, NULL, '2026-07-21 16:53:31', '2026-07-21 16:53:31'),
+(2, 4, 18, 'RET-202607-00002', 7500.00, 5, NULL, '2026-07-22 16:32:20', '2026-07-22 16:32:20'),
+(3, 4, 19, 'RET-202607-00003', 200000.00, 5, NULL, '2026-07-22 16:38:50', '2026-07-22 16:38:50');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sale_return_items`
+--
+
+CREATE TABLE `sale_return_items` (
+  `id` bigint UNSIGNED NOT NULL,
+  `sale_return_id` bigint UNSIGNED NOT NULL,
+  `sale_item_id` bigint UNSIGNED NOT NULL,
+  `product_id` bigint UNSIGNED NOT NULL,
+  `variant_id` bigint UNSIGNED DEFAULT NULL,
+  `quantity` decimal(12,3) NOT NULL,
+  `unit_price` decimal(12,2) NOT NULL,
+  `total_price` decimal(12,2) NOT NULL,
+  `return_type` enum('reintegrable','defective') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'reintegrable',
+  `reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `sale_return_items`
+--
+
+INSERT INTO `sale_return_items` (`id`, `sale_return_id`, `sale_item_id`, `product_id`, `variant_id`, `quantity`, `unit_price`, `total_price`, `return_type`, `reason`, `created_at`) VALUES
+(1, 1, 21, 7, NULL, 5.000, 7500.00, 37500.00, 'reintegrable', NULL, '2026-07-21 16:53:31'),
+(2, 2, 21, 7, NULL, 1.000, 7500.00, 7500.00, 'reintegrable', NULL, '2026-07-22 16:32:20'),
+(3, 3, 22, 3, NULL, 1.000, 200000.00, 200000.00, 'reintegrable', NULL, '2026-07-22 16:38:50');
 
 -- --------------------------------------------------------
 
@@ -866,6 +951,7 @@ CREATE TABLE `subscription_plans` (
   `max_clients` int UNSIGNED DEFAULT NULL,
   `features` json DEFAULT NULL COMMENT 'Liste des fonctionnalités activées',
   `is_active` tinyint(1) DEFAULT '1',
+  `is_admin_only` tinyint(1) DEFAULT '0',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -874,11 +960,12 @@ CREATE TABLE `subscription_plans` (
 -- Dumping data for table `subscription_plans`
 --
 
-INSERT INTO `subscription_plans` (`id`, `code`, `name`, `price_monthly`, `price_yearly`, `max_employees`, `max_products`, `max_clients`, `features`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'FREE', 'Gratuit', 0.00, 0.00, 2, 50, 100, '{\"reports\": false, \"suppliers\": false, \"api_access\": false, \"promotions\": false, \"advanced_stock\": false}', 1, '2026-05-07 13:10:46', '2026-05-07 13:10:46'),
-(2, 'STANDARD', 'Standard', 10000.00, 100000.00, 10, 500, 1000, '{\"reports\": true, \"suppliers\": true, \"api_access\": false, \"promotions\": false, \"advanced_stock\": false}', 1, '2026-05-07 13:10:46', '2026-06-21 23:22:38'),
-(3, 'PREMIUM', 'Premium', 25000.00, 250000.00, NULL, NULL, NULL, '{\"reports\": true, \"suppliers\": true, \"api_access\": true, \"promotions\": true, \"advanced_stock\": true}', 1, '2026-05-07 13:10:46', '2026-06-21 23:23:27'),
-(4, 'ORG', 'test', 5000.00, 60000.00, 3, 5, 5, '{\"reports\": false, \"suppliers\": false, \"api_access\": false, \"promotions\": false, \"advanced_stock\": false}', 1, '2026-06-21 23:18:11', '2026-06-21 23:25:34');
+INSERT INTO `subscription_plans` (`id`, `code`, `name`, `price_monthly`, `price_yearly`, `max_employees`, `max_products`, `max_clients`, `features`, `is_active`, `is_admin_only`, `created_at`, `updated_at`) VALUES
+(1, 'FREE', 'Gratuit', 0.00, 0.00, 2, 50, 100, '{\"reports\": false, \"suppliers\": false, \"api_access\": false, \"promotions\": false, \"advanced_stock\": false}', 1, 0, '2026-05-07 13:10:46', '2026-05-07 13:10:46'),
+(2, 'STANDARD', 'Standard', 10000.00, 100000.00, 10, 500, 1000, '{\"reports\": true, \"suppliers\": true, \"api_access\": false, \"promotions\": false, \"advanced_stock\": false}', 1, 0, '2026-05-07 13:10:46', '2026-06-21 23:22:38'),
+(3, 'PREMIUM', 'Premium', 25000.00, 250000.00, NULL, NULL, NULL, '{\"reports\": true, \"suppliers\": true, \"api_access\": true, \"promotions\": true, \"advanced_stock\": true}', 1, 0, '2026-05-07 13:10:46', '2026-06-21 23:23:27'),
+(4, 'ORG', 'test', 5000.00, 60000.00, 3, 5, 5, '{\"reports\": false, \"suppliers\": false, \"api_access\": false, \"promotions\": false, \"advanced_stock\": false}', 1, 0, '2026-06-21 23:18:11', '2026-06-21 23:25:34'),
+(5, 'UNLIMITED', 'Illimité Admin', 0.00, 0.00, NULL, NULL, NULL, '{\"reports\": true, \"suppliers\": true, \"api_access\": true, \"promotions\": true, \"advanced_stock\": true}', 1, 1, '2026-07-22 10:31:31', '2026-07-22 10:31:31');
 
 -- --------------------------------------------------------
 
@@ -1051,21 +1138,26 @@ CREATE TABLE `users` (
   `language` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'fr',
   `is_active` tinyint(1) DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `has_unlimited_access` tinyint(1) DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `first_name`, `last_name`, `email`, `phone`, `password_hash`, `avatar_url`, `email_verified_at`, `last_login_at`, `last_login_ip`, `language`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'Sounkalo', 'Sidibe', 'sidibesounk2003@gmail.com', '82863206', '$2b$12$Gjaanes8ITFbtDW2e6/czO2wbKmskT4FfYkzHxoDNHRtYF8olh1RC', NULL, NULL, '2026-05-19 00:58:51', '::1', 'fr', 1, '2026-05-18 14:32:48', '2026-05-18 22:58:51'),
-(2, 'isac', 'diarra', 'isac@gmail.com', '70667847', '$2b$10$UR4EenIE7.1HPIBC82xCYedaXB8oDdB7RRtyT8mvizsQytqx6rXvi', NULL, NULL, NULL, NULL, 'fr', 1, '2026-05-19 13:42:27', '2026-05-19 13:42:27'),
-(3, 'Sounkalo', 'Sidibe', 'sidibe@hotmail.com', '8286320600', '$2b$10$Rdiikyrox5lBqaNf4pgSVOExnHIWeMlXoC/TJiSpZ11qR855AZY6u', NULL, NULL, '2026-06-19 15:32:29', NULL, 'fr', 1, '2026-06-19 13:32:29', '2026-06-19 13:32:29'),
-(4, 'super', 'Administrateur', 'super_admin@gmail.com', '98778899', '$2b$10$UR4EenIE7.1HPIBC82xCYedaXB8oDdB7RRtyT8mvizsQytqx6rXvi', NULL, NULL, '2026-06-23 22:58:00', NULL, 'fr', 1, '2026-06-21 21:00:32', '2026-06-23 20:58:00'),
-(5, 'kaba', 'traore', 'kaba@gmail.com', '65009060', '$2b$10$gNQ8L4RfTi.T3cJt2rlLf.7Q6PnoRxqEz3qD9oAqUuiFWnakb0A32', NULL, NULL, '2026-07-21 14:32:29', NULL, 'fr', 1, '2026-06-22 00:31:02', '2026-07-21 12:32:29'),
-(6, 'Diallo ', 'Sidi', 'puralova29@gmail.com', '72122412', '$2b$10$e99DJhKhAqit7u5m.BHll..GGg70Ir/XQOXymsIbc1h60XpZUgDoe', NULL, NULL, NULL, NULL, 'fr', 1, '2026-06-24 13:32:15', '2026-06-24 13:32:15'),
-(7, 'ibrahim', 'diarra', 'ibradiarra@gmail.com', '+22382863288', '$2b$10$3cZis.ycVrpte0IWhBv93OZpiTEIlEULzqDQHWj5uRL4K/13.vH/2', NULL, NULL, NULL, NULL, 'fr', 1, '2026-07-13 15:24:00', '2026-07-13 15:24:00');
+INSERT INTO `users` (`id`, `first_name`, `last_name`, `email`, `phone`, `password_hash`, `avatar_url`, `email_verified_at`, `last_login_at`, `last_login_ip`, `language`, `is_active`, `created_at`, `updated_at`, `has_unlimited_access`) VALUES
+(1, 'Sounkalo', 'Sidibe', 'sidibesounk2003@gmail.com', '82863206', '$2b$12$Gjaanes8ITFbtDW2e6/czO2wbKmskT4FfYkzHxoDNHRtYF8olh1RC', NULL, NULL, '2026-05-19 00:58:51', '::1', 'fr', 1, '2026-05-18 14:32:48', '2026-05-18 22:58:51', 0),
+(2, 'isac', 'diarra', 'isac@gmail.com', '70667847', '$2b$10$UR4EenIE7.1HPIBC82xCYedaXB8oDdB7RRtyT8mvizsQytqx6rXvi', NULL, NULL, NULL, NULL, 'fr', 1, '2026-05-19 13:42:27', '2026-05-19 13:42:27', 0),
+(3, 'Sounkalo', 'Sidibe', 'sidibe@hotmail.com', '8286320600', '$2b$10$Rdiikyrox5lBqaNf4pgSVOExnHIWeMlXoC/TJiSpZ11qR855AZY6u', NULL, NULL, '2026-06-19 15:32:29', NULL, 'fr', 1, '2026-06-19 13:32:29', '2026-06-19 13:32:29', 0),
+(4, 'super', 'Administrateur', 'super_admin@gmail.com', '98778899', '$2b$10$UR4EenIE7.1HPIBC82xCYedaXB8oDdB7RRtyT8mvizsQytqx6rXvi', NULL, NULL, '2026-07-22 11:11:18', NULL, 'fr', 1, '2026-06-21 21:00:32', '2026-07-22 11:11:18', 0),
+(5, 'kaba', 'traore', 'kaba@gmail.com', '65009060', '$2b$10$gNQ8L4RfTi.T3cJt2rlLf.7Q6PnoRxqEz3qD9oAqUuiFWnakb0A32', NULL, NULL, '2026-07-22 14:33:42', NULL, 'fr', 1, '2026-06-22 00:31:02', '2026-07-22 14:33:42', 1),
+(6, 'Diallo ', 'Sidi', 'puralova29@gmail.com', '72122412', '$2b$10$e99DJhKhAqit7u5m.BHll..GGg70Ir/XQOXymsIbc1h60XpZUgDoe', NULL, NULL, NULL, NULL, 'fr', 1, '2026-06-24 13:32:15', '2026-06-24 13:32:15', 0),
+(7, 'ibrahim', 'diarra', 'ibradiarra@gmail.com', '+22382863288', '$2b$10$3cZis.ycVrpte0IWhBv93OZpiTEIlEULzqDQHWj5uRL4K/13.vH/2', NULL, NULL, NULL, NULL, 'fr', 1, '2026-07-13 15:24:00', '2026-07-13 15:24:00', 0),
+(8, 'issa kaba', 'traore', 'issakaba@gmail.com', '00876544', '$2b$10$RKYlZrl2prGDUp0IyBP32.AaOnsaq1YAKudERlX7q9KkBJk5isen2', NULL, NULL, '2026-07-21 19:37:02', NULL, 'fr', 1, '2026-07-21 19:36:27', '2026-07-21 19:37:02', 0),
+(9, 'iba', 'soumano', 'ibasoumano@gmail.com', '78482906', '$2b$10$Mn/5sjI1IpmBVBiWCDyACuxwmCQfdXx.ZL.D//bQNy..diGyEBL9e', NULL, NULL, '2026-07-28 12:20:26', NULL, 'fr', 1, '2026-07-22 11:12:30', '2026-07-28 12:20:26', 1),
+(10, 'ibrahim', 'traore', 'traore@gmail.com', '32234566', '$2b$10$iihsHgXA8SDP4xPgWSC0KeJbJzcPkEqh7OIhGKIIfjF9aiLmZs4f2', NULL, NULL, '2026-07-23 11:33:07', NULL, 'fr', 1, '2026-07-23 10:24:54', '2026-07-23 11:33:07', 0),
+(15, 'Gabrielle', 'toure', 'gab@gmail.con', NULL, '$2b$10$SB/hxOq4Pp5jK4hspcIcn.5b/KdQnJH/LG9FDwIvX6LJ6I1wIOfHa', NULL, NULL, '2026-07-28 11:46:18', NULL, 'fr', 1, '2026-07-28 11:44:37', '2026-07-28 11:46:18', 0);
 
 -- --------------------------------------------------------
 
@@ -1140,7 +1232,8 @@ CREATE TABLE `warehouses` (
 --
 
 INSERT INTO `warehouses` (`id`, `owner_id`, `name`, `description`, `address`, `status`, `created_at`, `updated_at`) VALUES
-(1, 5, 'entrepot principal', 'qwertyuiop', 'bamako-coura', 'active', '2026-07-21 13:41:47', '2026-07-21 13:41:47');
+(1, 5, 'entrepot principal', 'qwertyuiop', 'bamako-coura', 'active', '2026-07-21 13:41:47', '2026-07-21 13:41:47'),
+(2, 9, 'entrepot test', 'qwertyui', 'qwertyui', 'active', '2026-07-28 11:46:03', '2026-07-28 11:46:03');
 
 -- --------------------------------------------------------
 
@@ -1173,7 +1266,9 @@ INSERT INTO `warehouse_movements` (`id`, `warehouse_id`, `catalog_product_id`, `
 (4, 1, 1, 'transfer_to_shop', -20.000, 200.000, 180.000, 'manual', NULL, 4, 5, 'Transfert vers boutique', '2026-07-21 14:54:05'),
 (5, 1, 1, 'in_from_supplier', 100.000, 180.000, 280.000, 'supplier_order', 3, NULL, 5, NULL, '2026-07-21 14:57:34'),
 (6, 1, 2, 'in_from_supplier', 50.000, 0.000, 50.000, 'supplier_order', 4, NULL, 5, NULL, '2026-07-21 14:59:42'),
-(7, 1, 3, 'in_from_supplier', 50.000, 0.000, 50.000, 'supplier_order', 4, NULL, 5, NULL, '2026-07-21 14:59:43');
+(7, 1, 3, 'in_from_supplier', 50.000, 0.000, 50.000, 'supplier_order', 4, NULL, 5, NULL, '2026-07-21 14:59:43'),
+(9, 2, 6, 'in_from_supplier', 300.000, 0.000, 300.000, 'manual', NULL, NULL, 9, 'Stock initial', '2026-07-29 00:20:33'),
+(10, 2, 6, 'adjustment', 100.000, 300.000, 400.000, 'manual', NULL, NULL, 9, '[RETURN]', '2026-07-29 00:51:09');
 
 -- --------------------------------------------------------
 
@@ -1220,7 +1315,8 @@ CREATE TABLE `warehouse_stocks` (
 INSERT INTO `warehouse_stocks` (`id`, `warehouse_id`, `catalog_product_id`, `quantity`, `reserved_quantity`, `created_at`, `updated_at`) VALUES
 (1, 1, 1, 280.000, 0.000, '2026-07-21 14:46:11', '2026-07-21 14:57:34'),
 (2, 1, 2, 50.000, 0.000, '2026-07-21 14:59:42', '2026-07-21 14:59:42'),
-(3, 1, 3, 50.000, 0.000, '2026-07-21 14:59:43', '2026-07-21 14:59:43');
+(3, 1, 3, 50.000, 0.000, '2026-07-21 14:59:43', '2026-07-21 14:59:43'),
+(5, 2, 6, 400.000, 0.000, '2026-07-29 00:20:33', '2026-07-29 00:51:09');
 
 -- --------------------------------------------------------
 
@@ -1479,6 +1575,25 @@ ALTER TABLE `sale_items`
   ADD KEY `variant_id` (`variant_id`);
 
 --
+-- Indexes for table `sale_returns`
+--
+ALTER TABLE `sale_returns`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_return_number_company` (`company_id`,`return_number`),
+  ADD KEY `idx_sale_returns_sale` (`sale_id`),
+  ADD KEY `idx_sale_returns_company` (`company_id`),
+  ADD KEY `idx_sale_returns_created_by` (`created_by`);
+
+--
+-- Indexes for table `sale_return_items`
+--
+ALTER TABLE `sale_return_items`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_sale_return_items_return` (`sale_return_id`),
+  ADD KEY `idx_sale_return_items_sale_item` (`sale_item_id`),
+  ADD KEY `idx_sale_return_items_product` (`product_id`);
+
+--
 -- Indexes for table `staff_services`
 --
 ALTER TABLE `staff_services`
@@ -1622,7 +1737,7 @@ ALTER TABLE `warehouse_stocks`
 -- AUTO_INCREMENT for table `admin_audit_logs`
 --
 ALTER TABLE `admin_audit_logs`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `admin_notifications`
@@ -1670,7 +1785,7 @@ ALTER TABLE `client_debts`
 -- AUTO_INCREMENT for table `companies`
 --
 ALTER TABLE `companies`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `debt_payments`
@@ -1706,7 +1821,7 @@ ALTER TABLE `inventory_count_items`
 -- AUTO_INCREMENT for table `inventory_movements`
 --
 ALTER TABLE `inventory_movements`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `measurement_units`
@@ -1718,19 +1833,19 @@ ALTER TABLE `measurement_units`
 -- AUTO_INCREMENT for table `memberships`
 --
 ALTER TABLE `memberships`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `product_catalog`
 --
 ALTER TABLE `product_catalog`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `product_compositions`
@@ -1754,13 +1869,25 @@ ALTER TABLE `restaurant_tables`
 -- AUTO_INCREMENT for table `sales`
 --
 ALTER TABLE `sales`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `sale_items`
 --
 ALTER TABLE `sale_items`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+
+--
+-- AUTO_INCREMENT for table `sale_returns`
+--
+ALTER TABLE `sale_returns`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `sale_return_items`
+--
+ALTER TABLE `sale_return_items`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `staff_services`
@@ -1784,7 +1911,7 @@ ALTER TABLE `subscription_payment_proofs`
 -- AUTO_INCREMENT for table `subscription_plans`
 --
 ALTER TABLE `subscription_plans`
-  MODIFY `id` tinyint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` tinyint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `suppliers`
@@ -1820,7 +1947,7 @@ ALTER TABLE `table_sessions`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `user_password_resets`
@@ -1838,19 +1965,19 @@ ALTER TABLE `user_sessions`
 -- AUTO_INCREMENT for table `warehouses`
 --
 ALTER TABLE `warehouses`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `warehouse_movements`
 --
 ALTER TABLE `warehouse_movements`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `warehouse_stocks`
 --
 ALTER TABLE `warehouse_stocks`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- Constraints for dumped tables
@@ -2019,6 +2146,18 @@ ALTER TABLE `sale_items`
   ADD CONSTRAINT `sale_items_ibfk_1` FOREIGN KEY (`sale_id`) REFERENCES `sales` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `sale_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
   ADD CONSTRAINT `sale_items_ibfk_3` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `sale_returns`
+--
+ALTER TABLE `sale_returns`
+  ADD CONSTRAINT `fk_sale_returns_sale` FOREIGN KEY (`sale_id`) REFERENCES `sales` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `sale_return_items`
+--
+ALTER TABLE `sale_return_items`
+  ADD CONSTRAINT `fk_sale_return_items_return` FOREIGN KEY (`sale_return_id`) REFERENCES `sale_returns` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `staff_services`

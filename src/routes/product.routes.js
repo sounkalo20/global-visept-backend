@@ -14,6 +14,7 @@ const {
 const authenticate = require("../middlewares/auth.middleware");
 const validate = require("../middlewares/validate.middleware");
 const { requireMembership } = require("../middlewares/membership.middleware");
+const { subscriptionContext, enforceLimit } = require("../middlewares/subscription.middleware");
 const { uploadProductImage } = require("../middlewares/upload.middleware");
 const {
   createProductSchema,
@@ -60,6 +61,12 @@ router.post(
     }
   },
   requireMembership(["owner", "manager"]),
+  subscriptionContext,
+  enforceLimit('max_products', async (companyId) => {
+    const pool = require('../config/db');
+    const [rows] = await pool.query('SELECT COUNT(id) as count FROM products WHERE company_id = ? AND deleted_at IS NULL', [companyId]);
+    return rows[0].count;
+  }),
   createProduct,
 );
 
