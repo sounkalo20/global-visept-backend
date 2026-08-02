@@ -12,6 +12,7 @@ const {
 const authenticate = require("../middlewares/auth.middleware");
 const validate = require("../middlewares/validate.middleware");
 const { requireMembership } = require("../middlewares/membership.middleware");
+const { requirePermission } = require("../middlewares/permission.middleware");
 const {
   createClientSchema,
   updateClientSchema,
@@ -21,34 +22,36 @@ const {
 router.use(authenticate);
 
 // GET /api/clients/stats?company_id=X - Statistiques
-router.get("/stats", requireMembership(), getClientStats);
+router.get("/stats", requireMembership(), requirePermission('clients.view'), getClientStats);
 
 // GET /api/clients/search?company_id=X&q=xxx - Recherche rapide (POS)
-router.get("/search", requireMembership(), searchClients);
+router.get("/search", requireMembership(), requirePermission('clients.view'), searchClients);
 
 // POST /api/clients - Créer un client (owner, manager, cashier)
 router.post(
   "/",
   validate(createClientSchema),
-  requireMembership(["owner", "manager", "cashier"]),
+  requireMembership(),
+  requirePermission('clients.create'),
   createClient,
 );
 
 // GET /api/clients?company_id=X - Lister les clients
-router.get("/", requireMembership(), getClients);
+router.get("/", requireMembership(), requirePermission('clients.view'), getClients);
 
 // GET /api/clients/:id?company_id=X - Détails d'un client
-router.get("/:id", requireMembership(), getClientById);
+router.get("/:id", requireMembership(), requirePermission('clients.view'), getClientById);
 
 // PUT /api/clients/:id - Modifier un client (owner, manager)
 router.put(
   "/:id",
   validate(updateClientSchema),
-  requireMembership(["owner", "manager"]),
+  requireMembership(),
+  requirePermission('clients.edit'),
   updateClient,
 );
 
 // DELETE /api/clients/:id?company_id=X - Supprimer un client (owner)
-router.delete("/:id", requireMembership(["owner"]), deleteClient);
+router.delete("/:id", requireMembership(), requirePermission('clients.delete'), deleteClient);
 
 module.exports = router;

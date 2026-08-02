@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const authenticate = require('../../middlewares/auth.middleware');
 const { requireMembership } = require('../../middlewares/membership.middleware');
+const { requirePermission } = require('../../middlewares/permission.middleware');
 const { uploadProductImage } = require('../../middlewares/upload.middleware');
 
 const {
@@ -18,11 +19,11 @@ const {
 router.use(authenticate);
 
 // ─── PLATS ────────────────────────────────────────────
-router.post('/dishes', uploadProductImage,  requireMembership(['owner', 'manager']), createDish);
-router.get('/dishes', requireMembership(), getDishes);
-router.get('/dishes/:id', requireMembership(), getDishById);
-router.put('/dishes/:id', requireMembership(['owner', 'manager']), uploadProductImage, updateDish);
-router.delete('/dishes/:id', requireMembership(['owner']), deleteDish);
-router.put('/dishes/:id/toggle-availability', requireMembership(['owner', 'manager']), toggleAvailability);
+router.post('/dishes', uploadProductImage, requireMembership(), requirePermission('products.create'), createDish);
+router.get('/dishes', requireMembership(), requirePermission('products.view'), getDishes);
+router.get('/dishes/:id', requireMembership(), requirePermission('products.view'), getDishById);
+router.put('/dishes/:id', requireMembership(), requirePermission('products.edit'), uploadProductImage, updateDish);
+router.delete('/dishes/:id', requireMembership(), requirePermission('products.delete'), deleteDish);
+router.put('/dishes/:id/toggle-availability', requireMembership(), requirePermission('products.edit'), toggleAvailability);
 
 module.exports = router;

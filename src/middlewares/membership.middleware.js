@@ -38,7 +38,10 @@ const requireMembership = (allowedRoles = []) => {
 
       // Vérifier que l'utilisateur est membre de cette entreprise
       const [memberships] = await pool.query(
-        'SELECT id, role, is_active FROM memberships WHERE user_id = ? AND company_id = ?',
+        `SELECT m.id, m.role_id, m.is_active, r.name as role_name, r.is_system 
+         FROM memberships m
+         JOIN roles r ON m.role_id = r.id
+         WHERE m.user_id = ? AND m.company_id = ?`,
         [req.user.id, companyId]
       );
 
@@ -56,15 +59,11 @@ const requireMembership = (allowedRoles = []) => {
         );
       }
 
-      // Vérifier le rôle si nécessaire
-      if (
-        allowedRoles.length > 0 &&
-        !allowedRoles.includes(memberships[0].role)
-      ) {
-        throw new AppError(
-          "Vous n'avez pas les droits nécessaires pour effectuer cette action.",
-          403
-        );
+      // Le contrôle des rôles se fait désormais via le middleware requirePermission.
+      // On garde une compatibilité temporaire si nécessaire, mais ici on retire le check ENUM.
+      if (allowedRoles && allowedRoles.length > 0) {
+        // Obsolete: on ne fait rien, on log juste ou on ignore.
+        // La vraie vérif doit se faire via requirePermission("module.action").
       }
 
       // Injecter les infos dans req
@@ -74,7 +73,10 @@ const requireMembership = (allowedRoles = []) => {
       };
 
       req.membership = {
-        role: memberships[0].role,
+        role_id: memberships[0].role_id,
+        id: memberships[0].id,
+        role_name: memberships[0].role_name,
+        is_system_role: memberships[0].is_system === 1
       };
 
       next();

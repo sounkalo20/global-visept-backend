@@ -20,12 +20,15 @@ const getEmployees = async (req, res, next) => {
         u.phone, 
         u.is_active as user_active,
         m.id as membership_id,
-        m.role,
+        m.id as membership_id,
+        m.role_id,
+        r.name as role_name,
         m.is_active,
         m.joined_at
        FROM users u
        JOIN memberships m ON u.id = m.user_id
-       WHERE m.company_id = ? AND m.role != 'owner'
+       JOIN roles r ON m.role_id = r.id
+       WHERE m.company_id = ? AND r.name != 'Propriétaire'
        ORDER BY m.joined_at DESC`,
       [company_id]
     );
@@ -48,18 +51,23 @@ const createEmployee = async (req, res, next) => {
     await connection.beginTransaction();
 
     const { company_id } = req.body;
-    const { first_name, last_name, email, phone, password, role } = req.body;
+    const { first_name, last_name, email, phone, password, role_id } = req.body;
 
     if (!company_id) {
       throw new AppError("L'ID de l'entreprise est requis.", 400);
     }
-
-    // Le rôle est forcé à manager pour le moment si non fourni,
-    // ou on l'accepte s'il vient du front-end et on vérifie
-    const assignedRole = role || 'manager';
-
-    if (assignedRole !== 'manager' && assignedRole !== 'cashier') {
-      throw new AppError("Pour le moment, seuls les rôles 'gérant' et 'caissier' sont supportés.", 400);
+    
+    if (!role_id) {
+      throw new AppError("Le rôle (role_id) est requis.", 400);
+    }
+    
+    // Vérifier que le rôle existe pour cette entreprise
+    const [roles] = await connection.query('SELECT name FROM roles WHERE id = ? AND company_id = ?', [role_id, company_id]);
+    if (roles.length === 0) {
+      throw new AppError("Ce rôle est invalide ou n'appartient pas à l'entreprise.", 400);
+    }
+    if (roles[0].name === 'Propriétaire') {
+      throw new AppError("Vous ne pouvez pas assigner le rôle Propriétaire.", 400);
     }
 
     let userId;
@@ -83,8 +91,8 @@ const createEmployee = async (req, res, next) => {
         if (!existingMemberships[0].is_active) {
             // Réactiver l'adhésion si elle était désactivée
             await connection.query(
-                'UPDATE memberships SET is_active = 1, role = ? WHERE id = ?',
-                [assignedRole, existingMemberships[0].id]
+                'UPDATE memberships SET is_active = 1, role_id = ? WHERE id = ?',
+                [role_id, existingMemberships[0].id]
             );
         } else {
             throw new AppError('Cet utilisateur fait déjà partie de la boutique.', 409);
@@ -92,9 +100,9 @@ const createEmployee = async (req, res, next) => {
       } else {
         // L'utilisateur existe mais n'est pas dans l'entreprise, on l'ajoute
         await connection.query(
-          `INSERT INTO memberships (user_id, company_id, role, is_active, joined_at)
+          `INSERT INTO memberships (user_id, company_id, role_id, is_active, joined_at)
            VALUES (?, ?, ?, 1, NOW())`,
-          [userId, company_id, assignedRole]
+          [userId, company_id, role_id]
         );
       }
     } else {
@@ -116,9 +124,9 @@ const createEmployee = async (req, res, next) => {
 
       // Ajouter l'utilisateur à l'entreprise
       await connection.query(
-        `INSERT INTO memberships (user_id, company_id, role, is_active, joined_at)
+        `INSERT INTO memberships (user_id, company_id, role_id, is_active, joined_at)
          VALUES (?, ?, ?, 1, NOW())`,
-        [userId, company_id, assignedRole]
+        [userId, company_id, role_id]
       );
     }
 
@@ -128,9 +136,10 @@ const createEmployee = async (req, res, next) => {
     const [newEmployeeRows] = await connection.query(
       `SELECT 
         u.id, u.first_name, u.last_name, u.email, u.phone,
-        m.id as membership_id, m.role, m.is_active, m.joined_at
+        m.id as membership_id, m.role_id, r.name as role_name, m.is_active, m.joined_at
        FROM users u
        JOIN memberships m ON u.id = m.user_id
+       JOIN roles r ON m.role_id = r.id
        WHERE u.id = ? AND m.company_id = ?`,
       [userId, company_id]
     );
@@ -157,7 +166,7 @@ const updateEmployee = async (req, res, next) => {
     await connection.beginTransaction();
 
     const { id } = req.params; // ID de l'utilisateur (user_id)
-    const { company_id, first_name, last_name, phone, password, role, is_active } = req.body;
+    const { company_id, first_name, last_name, phone, password, role_id, is_active } = req.body;
 
     if (!company_id) {
       throw new AppError("L'ID de l'entreprise est requis.", 400);
@@ -165,7 +174,10 @@ const updateEmployee = async (req, res, next) => {
 
     // Vérifier que l'utilisateur appartient bien à l'entreprise et qu'on ne modifie pas le propriétaire
     const [memberships] = await connection.query(
-      'SELECT id, role FROM memberships WHERE user_id = ? AND company_id = ?',
+      `SELECT m.id, r.name as role_name 
+       FROM memberships m
+       JOIN roles r ON m.role_id = r.id
+       WHERE m.user_id = ? AND m.company_id = ?`,
       [id, company_id]
     );
 
@@ -173,7 +185,7 @@ const updateEmployee = async (req, res, next) => {
       throw new AppError("Cet utilisateur ne fait pas partie de la boutique.", 404);
     }
 
-    if (memberships[0].role === 'owner') {
+    if (memberships[0].role_name === 'Propriétaire') {
       throw new AppError("Vous ne pouvez pas modifier le propriétaire via cette action.", 403);
     }
 
@@ -212,9 +224,17 @@ const updateEmployee = async (req, res, next) => {
     const membershipUpdateFields = [];
     const membershipUpdateValues = [];
     
-    if (role && (role === 'manager' || role === 'cashier')) {
-      membershipUpdateFields.push('role = ?');
-      membershipUpdateValues.push(role);
+    if (role_id) {
+      // Vérifier que le rôle existe et n'est pas propriétaire
+      const [roles] = await connection.query('SELECT name FROM roles WHERE id = ? AND company_id = ?', [role_id, company_id]);
+      if (roles.length === 0) {
+        throw new AppError("Ce rôle est invalide ou n'appartient pas à l'entreprise.", 400);
+      }
+      if (roles[0].name === 'Propriétaire') {
+        throw new AppError("Vous ne pouvez pas assigner le rôle Propriétaire.", 400);
+      }
+      membershipUpdateFields.push('role_id = ?');
+      membershipUpdateValues.push(role_id);
     }
     
     if (is_active !== undefined) {
@@ -235,9 +255,10 @@ const updateEmployee = async (req, res, next) => {
     const [updatedEmployee] = await connection.query(
         `SELECT 
           u.id, u.first_name, u.last_name, u.email, u.phone,
-          m.id as membership_id, m.role, m.is_active, m.joined_at
+          m.id as membership_id, m.role_id, r.name as role_name, m.is_active, m.joined_at
          FROM users u
          JOIN memberships m ON u.id = m.user_id
+         JOIN roles r ON m.role_id = r.id
          WHERE u.id = ? AND m.company_id = ?`,
         [id, company_id]
       );
@@ -268,7 +289,10 @@ const deleteEmployee = async (req, res, next) => {
     }
 
     const [memberships] = await pool.query(
-      'SELECT id, role FROM memberships WHERE user_id = ? AND company_id = ?',
+      `SELECT m.id, r.name as role_name 
+       FROM memberships m
+       JOIN roles r ON m.role_id = r.id
+       WHERE m.user_id = ? AND m.company_id = ?`,
       [id, company_id]
     );
 
@@ -276,7 +300,7 @@ const deleteEmployee = async (req, res, next) => {
       throw new AppError("Cet employé ne fait pas partie de la boutique.", 404);
     }
 
-    if (memberships[0].role === 'owner') {
+    if (memberships[0].role_name === 'Propriétaire') {
       throw new AppError("Vous ne pouvez pas supprimer le propriétaire de la boutique.", 403);
     }
 

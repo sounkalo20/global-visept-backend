@@ -61,11 +61,51 @@ const createCompany = async (req, res, next) => {
 
     const companyId = companyResult.insertId;
 
+    // --- RBAC: Créer les rôles par défaut pour la nouvelle entreprise ---
+    const [ownerRoleRes] = await connection.query(
+      "INSERT INTO roles (company_id, name, description, is_system) VALUES (?, ?, ?, 1)",
+      [companyId, 'Propriétaire', "Tous les droits sur l'entreprise"]
+    );
+    const ownerRoleId = ownerRoleRes.insertId;
+
+    const [managerRoleRes] = await connection.query(
+      "INSERT INTO roles (company_id, name, description, is_system) VALUES (?, ?, ?, 1)",
+      [companyId, 'Gérant', "Gestion complète sauf paramètres"]
+    );
+    const managerRoleId = managerRoleRes.insertId;
+
+    const [cashierRoleRes] = await connection.query(
+      "INSERT INTO roles (company_id, name, description, is_system) VALUES (?, ?, ?, 1)",
+      [companyId, 'Caissier', "Encaissement et ventes uniquement"]
+    );
+    const cashierRoleId = cashierRoleRes.insertId;
+
+    // Assigner toutes les permissions au Propriétaire
+    const [allPerms] = await connection.query('SELECT id FROM permissions');
+    if (allPerms.length > 0) {
+      const ownerPerms = allPerms.map(p => [ownerRoleId, p.id]);
+      await connection.query('INSERT INTO role_permissions (role_id, permission_id) VALUES ?', [ownerPerms]);
+    }
+
+    // Assigner les permissions au Gérant (tout sauf settings et roles)
+    const [managerPermsData] = await connection.query("SELECT id FROM permissions WHERE code NOT LIKE 'settings.%' AND code NOT LIKE 'roles.%'");
+    if (managerPermsData.length > 0) {
+      const managerPerms = managerPermsData.map(p => [managerRoleId, p.id]);
+      await connection.query('INSERT INTO role_permissions (role_id, permission_id) VALUES ?', [managerPerms]);
+    }
+
+    // Assigner les permissions au Caissier
+    const [cashierPermsData] = await connection.query("SELECT id FROM permissions WHERE code IN ('dashboard.view', 'products.view', 'sales.view', 'sales.create', 'sales.print', 'sales.return')");
+    if (cashierPermsData.length > 0) {
+      const cashierPerms = cashierPermsData.map(p => [cashierRoleId, p.id]);
+      await connection.query('INSERT INTO role_permissions (role_id, permission_id) VALUES ?', [cashierPerms]);
+    }
+
     // Ajouter l'utilisateur comme OWNER
     await connection.query(
-      `INSERT INTO memberships (user_id, company_id, role, is_active, joined_at)
-       VALUES (?, ?, 'owner', 1, NOW())`,
-      [req.user.id, companyId]
+      `INSERT INTO memberships (user_id, company_id, role, role_id, is_active, joined_at)
+       VALUES (?, ?, 'owner', ?, 1, NOW())`,
+      [req.user.id, companyId, ownerRoleId]
     );
 
     await connection.commit();
