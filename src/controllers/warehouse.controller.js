@@ -1,6 +1,18 @@
 const pool = require('../config/db');
 const AppError = require('../utils/AppError');
 
+const getOwnerId = async (req) => {
+  const companyId = req.query?.company_id || req.body?.company_id || req.query?.companyId || req.body?.companyId || req.body?.destination_company_id;
+  if (companyId) {
+    const [ownerRows] = await pool.query(
+      "SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1",
+      [companyId]
+    );
+    if (ownerRows.length > 0) return ownerRows[0].user_id;
+  }
+  return req.user.id;
+};
+
 exports.createWarehouse = async (req, res, next) => {
   try {
     const { name, description, address } = req.body;
@@ -27,7 +39,7 @@ exports.createWarehouse = async (req, res, next) => {
 
 exports.getWarehouses = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
 
     const [warehouses] = await pool.query(
       `SELECT * FROM warehouses WHERE owner_id = ? AND status = 'active' ORDER BY created_at DESC`,
@@ -45,7 +57,7 @@ exports.getWarehouses = async (req, res, next) => {
 
 exports.getWarehouse = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
 
     const [warehouses] = await pool.query(
@@ -68,7 +80,7 @@ exports.getWarehouse = async (req, res, next) => {
 
 exports.updateWarehouse = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
     const { name, description, address, status } = req.body;
 
@@ -97,7 +109,7 @@ exports.updateWarehouse = async (req, res, next) => {
 
 exports.deleteWarehouse = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
 
     const [warehouses] = await pool.query(
@@ -125,7 +137,7 @@ exports.deleteWarehouse = async (req, res, next) => {
 
 exports.getWarehouseStocks = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
 
     const [warehouses] = await pool.query(
@@ -156,7 +168,7 @@ exports.getWarehouseStocks = async (req, res, next) => {
 
 exports.getWarehouseMovements = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
 
     const [warehouses] = await pool.query(
@@ -193,7 +205,7 @@ exports.transferToShop = async (req, res, next) => {
   try {
     await connection.beginTransaction();
 
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
     const { product_id, quantity, destination_company_id, notes } = req.body;
 
@@ -283,7 +295,7 @@ exports.transferToShop = async (req, res, next) => {
 
 exports.getProductWarehouseStocks = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const { catalog_product_id } = req.params;
 
     const [stocks] = await pool.query(
@@ -305,7 +317,7 @@ exports.getProductWarehouseStocks = async (req, res, next) => {
 
 exports.searchGlobalProducts = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const { q } = req.query;
 
     if (!q || q.trim().length === 0) {
@@ -333,7 +345,7 @@ exports.searchGlobalProducts = async (req, res, next) => {
 
 exports.getProductWarehouseMovements = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const { catalog_product_id } = req.params;
 
     const [movements] = await pool.query(
@@ -362,7 +374,7 @@ exports.adjustWarehouseStock = async (req, res, next) => {
   try {
     await connection.beginTransaction();
 
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
     const {
       catalog_product_id,
@@ -525,7 +537,7 @@ exports.getAdjustmentReasons = async (req, res, next) => {
 // ─── RÉCUPÉRER LES AJUSTEMENTS D'UN ENTREPÔT ──────────
 exports.getWarehouseAdjustments = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const warehouseId = req.params.id;
     const {
       start_date,
@@ -617,7 +629,7 @@ exports.getWarehouseAdjustments = async (req, res, next) => {
 // ─── RÉCUPÉRER LES AJUSTEMENTS D'UN PRODUIT SPÉCIFIQUE ──
 exports.getProductAdjustments = async (req, res, next) => {
   try {
-    const owner_id = req.user.id;
+    const owner_id = await getOwnerId(req);
     const { catalog_product_id } = req.params;
     const {
       start_date,
@@ -687,5 +699,120 @@ exports.getProductAdjustments = async (req, res, next) => {
 
   } catch (error) {
     next(error);
+  }
+};
+
+exports.cancelTransfer = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const owner_id = await getOwnerId(req);
+    const movementId = req.params.id;
+
+    // 1. Récupérer le mouvement
+    const [movements] = await connection.query(
+      `SELECT m.*, w.owner_id as w_owner_id
+       FROM warehouse_movements m
+       JOIN warehouses w ON m.warehouse_id = w.id
+       WHERE m.id = ? FOR UPDATE`,
+      [movementId]
+    );
+
+    if (movements.length === 0) {
+      throw new AppError("Mouvement introuvable", 404);
+    }
+
+    const movement = movements[0];
+
+    if (movement.w_owner_id !== owner_id) {
+      throw new AppError("Vous n'êtes pas autorisé à annuler ce transfert", 403);
+    }
+
+    if (movement.movement_type !== 'transfer_to_shop') {
+      throw new AppError("Seuls les transferts vers boutique peuvent être annulés", 400);
+    }
+
+    if (movement.is_cancelled) {
+      throw new AppError("Ce transfert a déjà été annulé", 400);
+    }
+
+    const quantity = Math.abs(parseFloat(movement.quantity));
+    const catalog_product_id = movement.catalog_product_id;
+    const warehouse_id = movement.warehouse_id;
+    const destination_company_id = movement.destination_company_id;
+
+    // 2. Restituer le stock à l'entrepôt
+    const [warehouseStocks] = await connection.query(
+      `SELECT id, quantity FROM warehouse_stocks WHERE warehouse_id = ? AND catalog_product_id = ? FOR UPDATE`,
+      [warehouse_id, catalog_product_id]
+    );
+    
+    let warehouseStockBefore = 0;
+    if (warehouseStocks.length > 0) {
+      warehouseStockBefore = parseFloat(warehouseStocks[0].quantity);
+      await connection.query(
+        `UPDATE warehouse_stocks SET quantity = quantity + ? WHERE id = ?`,
+        [quantity, warehouseStocks[0].id]
+      );
+    } else {
+      await connection.query(
+        `INSERT INTO warehouse_stocks (warehouse_id, catalog_product_id, quantity) VALUES (?, ?, ?)`,
+        [warehouse_id, catalog_product_id, quantity]
+      );
+    }
+    const warehouseStockAfter = warehouseStockBefore + quantity;
+
+    // 3. Déduire le stock de la boutique
+    const ProductCatalogService = require('../services/ProductCatalogService');
+    const { product: shopProduct } = await ProductCatalogService.getOrCreateShopProduct(destination_company_id, catalog_product_id, connection);
+    
+    const [products] = await connection.query(
+      `SELECT id, current_stock FROM products WHERE id = ? FOR UPDATE`,
+      [shopProduct.id]
+    );
+
+    let shopStockBefore = 0;
+    if (products.length > 0) {
+      shopStockBefore = parseFloat(products[0].current_stock || 0);
+      await connection.query(
+        `UPDATE products SET current_stock = current_stock - ? WHERE id = ?`,
+        [quantity, shopProduct.id]
+      );
+    }
+    const shopStockAfter = shopStockBefore - quantity;
+
+    // 4. Mettre à jour is_cancelled sur le mouvement d'origine
+    await connection.query(
+      `UPDATE warehouse_movements SET is_cancelled = TRUE WHERE id = ?`,
+      [movementId]
+    );
+
+    // 5. Enregistrer le mouvement inverse dans l'entrepôt
+    await connection.query(
+      `INSERT INTO warehouse_movements 
+       (warehouse_id, catalog_product_id, movement_type, quantity, stock_before, stock_after, reference_type, performed_by, notes, is_cancelled)
+       VALUES (?, ?, 'transfer_cancel', ?, ?, ?, 'manual', ?, ?, TRUE)`,
+      [warehouse_id, catalog_product_id, quantity, warehouseStockBefore, warehouseStockAfter, req.user.id, 'Annulation transfert ' + movementId]
+    );
+
+    // 6. Enregistrer le mouvement inverse dans la boutique
+    await connection.query(
+      `INSERT INTO inventory_movements
+       (company_id, product_id, movement_type, quantity, stock_before, stock_after, reference_type, note, performed_by)
+       VALUES (?, ?, 'transfer_out', ?, ?, ?, 'warehouse_transfer_cancel', ?, ?)`,
+      [destination_company_id, shopProduct.id, quantity, shopStockBefore, shopStockAfter, 'Annulation réception entrepôt (ID: ' + movementId + ')', req.user.id]
+    );
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: "Transfert annulé avec succès. Les stocks ont été restitués."
+    });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
   }
 };

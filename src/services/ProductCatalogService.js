@@ -15,7 +15,7 @@ class ProductCatalogService {
      * Trouve ou crée un produit dans le catalogue global du propriétaire
      */
     static async findOrCreateCatalogProduct(ownerId, productData, connection = pool) {
-        const { name, barcode, description, image_url, unit_id } = productData;
+        const { name, barcode, description, image_url, unit_id, category_id } = productData;
         const slug = this.generateSlug(name);
         
         // 1. Chercher par barcode si fourni
@@ -37,9 +37,9 @@ class ProductCatalogService {
         // 3. Créer si non trouvé
         const actualUnitId = unit_id || 1;
         const [result] = await connection.query(
-            `INSERT INTO product_catalog (owner_id, name, slug, barcode, description, image_url, unit_id, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
-            [ownerId, name, slug, barcode || null, description || null, image_url || null, actualUnitId]
+            `INSERT INTO product_catalog (owner_id, name, slug, barcode, description, image_url, unit_id, category_id, is_active)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+            [ownerId, name, slug, barcode || null, description || null, image_url || null, actualUnitId, category_id || null]
         );
         
         const [newRows] = await connection.query(`SELECT * FROM product_catalog WHERE id = ?`, [result.insertId]);

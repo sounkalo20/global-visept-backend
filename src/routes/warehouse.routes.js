@@ -37,6 +37,7 @@ router.get('/:id/adjustments', warehouseController.getWarehouseAdjustments);
 
 // 6. Routes de transfert
 router.post('/:id/transfer', warehouseController.transferToShop);
+router.post('/transfers/:id/cancel', warehouseController.cancelTransfer);
 
 // 7. Routes de stocks et mouvements
 router.get('/:id/stocks', warehouseController.getWarehouseStocks);

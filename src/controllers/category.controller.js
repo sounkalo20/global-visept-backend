@@ -1,11 +1,24 @@
 const pool = require("../config/db");
 const AppError = require("../utils/AppError");
 
+const getOwnerId = async (companyId) => {
+  const [ownerRows] = await pool.query(
+    "SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1",
+    [companyId]
+  );
+  return ownerRows.length > 0 ? ownerRows[0].user_id : null;
+};
+
 // ─── CRÉER UNE CATÉGORIE ─────────────────────────────────
 const createCategory = async (req, res, next) => {
   try {
     const { name, description, parent_id, sort_order, is_active } = req.body;
     const companyId = req.company.id;
+    const owner_id = await getOwnerId(companyId);
+    
+    if (!owner_id) {
+      throw new AppError("Propriétaire introuvable pour cette entreprise.", 403);
+    }
 
     // Générer le slug
     const slug =
@@ -19,8 +32,8 @@ const createCategory = async (req, res, next) => {
     // Si parent_id est fourni, vérifier qu'il appartient à la même entreprise
     if (parent_id) {
       const [parentCategories] = await pool.query(
-        "SELECT id FROM categories WHERE id = ? AND company_id = ?",
-        [parent_id, companyId],
+        "SELECT id FROM categories WHERE id = ? AND owner_id = ?",
+        [parent_id, owner_id],
       );
 
       if (parentCategories.length === 0) {
@@ -33,8 +46,8 @@ const createCategory = async (req, res, next) => {
 
     // Vérifier l'unicité du nom pour cette entreprise
     const [existing] = await pool.query(
-      "SELECT id FROM categories WHERE company_id = ? AND name = ? AND deleted_at IS NULL",
-      [companyId, name],
+      "SELECT id FROM categories WHERE owner_id = ? AND name = ? AND deleted_at IS NULL",
+      [owner_id, name],
     );
 
     if (existing.length > 0) {
@@ -46,10 +59,10 @@ const createCategory = async (req, res, next) => {
 
     // Insérer la catégorie
     const [result] = await pool.query(
-      `INSERT INTO categories (company_id, parent_id, name, slug, description, sort_order, is_active)
+      `INSERT INTO categories (owner_id, parent_id, name, slug, description, sort_order, is_active)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
-        companyId,
+        owner_id,
         parent_id || null,
         name,
         slug,
@@ -81,15 +94,20 @@ const createCategory = async (req, res, next) => {
 const getCategories = async (req, res, next) => {
   try {
     const companyId = req.company.id;
+    const owner_id = await getOwnerId(companyId);
+    
+    if (!owner_id) {
+      throw new AppError("Propriétaire introuvable pour cette entreprise.", 403);
+    }
 
     // Récupérer les catégories racines (sans parent)
     const [categories] = await pool.query(
       `SELECT c.*,
               (SELECT COUNT(*) FROM categories sub WHERE sub.parent_id = c.id AND sub.deleted_at IS NULL) as children_count
        FROM categories c
-       WHERE c.company_id = ? AND c.parent_id IS NULL AND c.deleted_at IS NULL
+       WHERE c.owner_id = ? AND c.parent_id IS NULL AND c.deleted_at IS NULL
        ORDER BY c.sort_order ASC, c.name ASC`,
-      [companyId],
+      [owner_id],
     );
 
     // Pour chaque catégorie racine, récupérer ses sous-catégories
@@ -98,9 +116,9 @@ const getCategories = async (req, res, next) => {
         if (category.children_count > 0) {
           const [children] = await pool.query(
             `SELECT * FROM categories
-             WHERE company_id = ? AND parent_id = ? AND deleted_at IS NULL
+             WHERE owner_id = ? AND parent_id = ? AND deleted_at IS NULL
              ORDER BY sort_order ASC, name ASC`,
-            [companyId, category.id],
+            [owner_id, category.id],
           );
           return { ...category, children };
         }
@@ -125,11 +143,16 @@ const getCategoryById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const companyId = req.company.id;
+    const owner_id = await getOwnerId(companyId);
+    
+    if (!owner_id) {
+      throw new AppError("Propriétaire introuvable.", 403);
+    }
 
     // Récupérer la catégorie
     const [categories] = await pool.query(
-      "SELECT * FROM categories WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
-      [id, companyId],
+      "SELECT * FROM categories WHERE id = ? AND owner_id = ? AND deleted_at IS NULL",
+      [id, owner_id],
     );
 
     if (categories.length === 0) {
@@ -140,16 +163,16 @@ const getCategoryById = async (req, res, next) => {
 
     // Récupérer les sous-catégories
     const [children] = await pool.query(
-      "SELECT * FROM categories WHERE company_id = ? AND parent_id = ? AND deleted_at IS NULL ORDER BY sort_order ASC, name ASC",
-      [companyId, category.id],
+      "SELECT * FROM categories WHERE owner_id = ? AND parent_id = ? AND deleted_at IS NULL ORDER BY sort_order ASC, name ASC",
+      [owner_id, category.id],
     );
 
     // Récupérer le parent si existe
     let parent = null;
     if (category.parent_id) {
       const [parents] = await pool.query(
-        "SELECT id, name, slug FROM categories WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
-        [category.parent_id, companyId],
+        "SELECT id, name, slug FROM categories WHERE id = ? AND owner_id = ? AND deleted_at IS NULL",
+        [category.parent_id, owner_id],
       );
       parent = parents[0] || null;
     }
@@ -174,12 +197,17 @@ const updateCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
     const companyId = req.company.id;
+    const owner_id = await getOwnerId(companyId);
+    
+    if (!owner_id) {
+      throw new AppError("Propriétaire introuvable.", 403);
+    }
     const { name, description, parent_id, sort_order, is_active } = req.body;
 
     // Vérifier que la catégorie existe et appartient à l'entreprise
     const [categories] = await pool.query(
-      "SELECT * FROM categories WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
-      [id, companyId],
+      "SELECT * FROM categories WHERE id = ? AND owner_id = ? AND deleted_at IS NULL",
+      [id, owner_id],
     );
 
     if (categories.length === 0) {
@@ -191,8 +219,8 @@ const updateCategory = async (req, res, next) => {
     // Si le nom change, vérifier l'unicité
     if (name && name !== category.name) {
       const [existing] = await pool.query(
-        "SELECT id FROM categories WHERE company_id = ? AND name = ? AND id != ? AND deleted_at IS NULL",
-        [companyId, name, id],
+        "SELECT id FROM categories WHERE owner_id = ? AND name = ? AND id != ? AND deleted_at IS NULL",
+        [owner_id, name, id],
       );
 
       if (existing.length > 0) {
@@ -218,8 +246,8 @@ const updateCategory = async (req, res, next) => {
       }
 
       const [parentCategories] = await pool.query(
-        "SELECT id FROM categories WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
-        [parent_id, companyId],
+        "SELECT id FROM categories WHERE id = ? AND owner_id = ? AND deleted_at IS NULL",
+        [parent_id, owner_id],
       );
 
       if (parentCategories.length === 0) {
@@ -319,11 +347,16 @@ const deleteCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
     const companyId = req.company.id;
+    const owner_id = await getOwnerId(companyId);
+    
+    if (!owner_id) {
+      throw new AppError("Propriétaire introuvable.", 403);
+    }
 
     // Vérifier que la catégorie existe et appartient à l'entreprise
     const [categories] = await pool.query(
-      "SELECT * FROM categories WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
-      [id, companyId],
+      "SELECT * FROM categories WHERE id = ? AND owner_id = ? AND deleted_at IS NULL",
+      [id, owner_id],
     );
 
     if (categories.length === 0) {
@@ -358,8 +391,8 @@ const deleteCategory = async (req, res, next) => {
 
     // Soft delete
     await pool.query(
-      "UPDATE categories SET deleted_at = NOW() WHERE id = ? AND company_id = ?",
-      [id, companyId],
+      "UPDATE categories SET deleted_at = NOW() WHERE id = ? AND owner_id = ?",
+      [id, owner_id],
     );
 
     res.status(200).json({
