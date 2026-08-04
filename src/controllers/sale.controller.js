@@ -41,6 +41,7 @@ const createSale = async (req, res, next) => {
       amount_paid,
       payment_method,
       payment_reference,
+      payments,
       notes,
     } = req.body;
 
@@ -156,15 +157,31 @@ const createSale = async (req, res, next) => {
     const totalAmount = subtotal - globalDiscount;
 
     // ===============================
-    // 🚨 PAYMENT VALIDATION - MEILLEURE VERSION
-    // Le montant payé doit être supérieur ou égal au total
-    // Cela permet les trop-perçus (monnaie) tout en interdisant les dettes
+    // 🚨 PAYMENT VALIDATION & MULTI-PAYMENTS
     // ===============================
-    const paid = Number(amount_paid);
     const roundedTotal = Math.round(totalAmount * 100) / 100;
+    
+    // Normaliser les paiements
+    let finalPayments = [];
+    if (payments && Array.isArray(payments) && payments.length > 0) {
+      finalPayments = payments.map(p => ({
+        method: p.method || 'cash',
+        amount: Number(p.amount) || 0,
+        reference: p.reference || null
+      }));
+    } else {
+      // Fallback legacy
+      finalPayments = [{
+        method: payment_method || 'cash',
+        amount: Number(amount_paid) || 0,
+        reference: payment_reference || null
+      }];
+    }
+
+    const paid = finalPayments.reduce((acc, p) => acc + p.amount, 0);
     const roundedPaid = Math.round(paid * 100) / 100;
 
-    if (!amount_paid || roundedPaid < roundedTotal) {
+    if (roundedPaid < roundedTotal) {
       throw new AppError(
         `Le montant payé (${roundedPaid} FCFA) est insuffisant. Le total de la vente est de ${roundedTotal} FCFA.`,
         400
@@ -172,9 +189,43 @@ const createSale = async (req, res, next) => {
     }
 
     // Calcul du rendu de monnaie (si trop-perçu)
-    const changeAmount = roundedPaid > roundedTotal ? roundedPaid - roundedTotal : 0;
+    // On déduit la monnaie du premier paiement en espèces trouvé, sinon du premier paiement.
+    let changeAmount = roundedPaid > roundedTotal ? roundedPaid - roundedTotal : 0;
+    if (changeAmount > 0) {
+      let changeDeducted = false;
+      for (let p of finalPayments) {
+        if (p.method === 'cash' && p.amount >= changeAmount) {
+          p.amount -= changeAmount;
+          changeDeducted = true;
+          break;
+        }
+      }
+      if (!changeDeducted) {
+        // Fallback si pas de paiement cash suffisant
+        finalPayments[0].amount -= changeAmount;
+      }
+    }
+
     const amountDue = 0;
     const finalPaymentStatus = "paid";
+    const primaryPaymentMethod = finalPayments[0].method; // Pour la rétrocompatibilité
+    
+    // ===============================
+    // 🔍 CHECK CASH SESSION ACTIVE
+    // ===============================
+    let activeCashSessionId = null;
+    const [sessions] = await connection.query(
+      `SELECT id FROM cash_sessions WHERE user_id = ? AND company_id = ? AND status = 'open' LIMIT 1`,
+      [userId, companyId]
+    );
+    if (sessions.length > 0) {
+      activeCashSessionId = sessions[0].id;
+    }
+
+    const isCashier = req.membership && req.membership.is_system_role && req.membership.role_name === 'Caissier';
+    if (isCashier && !activeCashSessionId) {
+      throw new AppError("Vous devez ouvrir une session de caisse avant de pouvoir effectuer une vente.", 403);
+    }
 
     // ===============================
     // 🧾 SALE NUMBER
@@ -200,16 +251,46 @@ const createSale = async (req, res, next) => {
         0,
         roundedTotal,
         finalPaymentStatus,
-        roundedPaid,
+        roundedPaid, // Le montant donné par le client pour calculer le rendu
         amountDue,
-        payment_method,
-        payment_reference || null,
+        primaryPaymentMethod,
+        finalPayments[0].reference || null,
         userId,
         notes || null,
       ]
     );
 
     const saleId = saleResult.insertId;
+
+    // ===============================
+    // 💰 INSERT SALE PAYMENTS & CASH MOVEMENTS
+    // ===============================
+    for (const payment of finalPayments) {
+      if (payment.amount <= 0) continue; // Ignorer les paiements tombés à 0 à cause du rendu
+
+      await connection.query(
+        `INSERT INTO sale_payments (sale_id, cash_session_id, payment_method, amount, reference)
+         VALUES (?, ?, ?, ?, ?)`,
+        [saleId, activeCashSessionId, payment.method, payment.amount, payment.reference]
+      );
+
+      // Si une session de caisse est active, tracer TOUS les mouvements dans la caisse
+      if (activeCashSessionId) {
+        await connection.query(
+          `INSERT INTO cash_movements (session_id, type, payment_method, amount, reference_id, notes)
+           VALUES (?, 'sale_in', ?, ?, ?, ?)`,
+          [activeCashSessionId, payment.method, payment.amount, saleId, 'Vente ' + saleNumber]
+        );
+        
+        // Mettre à jour le montant attendu de la caisse (uniquement pour l'espèce)
+        if (payment.method === 'cash') {
+          await connection.query(
+            `UPDATE cash_sessions SET expected_closing_amount = expected_closing_amount + ? WHERE id = ?`,
+            [payment.amount, activeCashSessionId]
+          );
+        }
+      }
+    }
 
     // ===============================
     // 📦 INSERT ITEMS + STOCK
@@ -289,6 +370,11 @@ const createSale = async (req, res, next) => {
       [saleId]
     );
 
+    const [salePayments] = await connection.query(
+      `SELECT * FROM sale_payments WHERE sale_id = ?`,
+      [saleId]
+    );
+
     return res.status(201).json({
       success: true,
       message: "Vente créée avec succès.",
@@ -296,6 +382,7 @@ const createSale = async (req, res, next) => {
         sale: {
           ...sales[0],
           items: saleItems,
+          payments: salePayments,
         },
         change: changeAmount > 0 ? changeAmount : 0,
       },
@@ -541,12 +628,19 @@ const getSaleById = async (req, res, next) => {
       r.items = returnItems;
     }
 
+    // Récupérer les paiements multiples (Split Payments)
+    const [payments] = await pool.query(
+      `SELECT * FROM sale_payments WHERE sale_id = ? ORDER BY created_at ASC`,
+      [id]
+    );
+
     res.status(200).json({
       success: true,
       data: {
         sale: {
           ...sales[0],
           items,
+          payments, // <- NOUEVAU : tableau des paiements
           stock_movements: stockMovements,
           returns: returns,
         },

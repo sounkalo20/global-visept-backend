@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jul 29, 2026 at 02:20 PM
+-- Generation Time: Aug 03, 2026 at 01:11 PM
 -- Server version: 8.4.3
 -- PHP Version: 8.3.30
 
@@ -150,7 +150,8 @@ INSERT INTO `business_types` (`id`, `code`, `name`, `description`, `icon`, `is_a
 
 CREATE TABLE `categories` (
   `id` bigint UNSIGNED NOT NULL,
-  `company_id` bigint UNSIGNED NOT NULL,
+  `company_id` bigint UNSIGNED DEFAULT NULL,
+  `owner_id` bigint UNSIGNED DEFAULT NULL,
   `parent_id` bigint UNSIGNED DEFAULT NULL,
   `name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `slug` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -167,12 +168,12 @@ CREATE TABLE `categories` (
 -- Dumping data for table `categories`
 --
 
-INSERT INTO `categories` (`id`, `company_id`, `parent_id`, `name`, `slug`, `description`, `image_url`, `sort_order`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(1, 2, NULL, 'telephone ', 'telephone-1779206425400', 'differente categorie de telephone du systeme ', NULL, 0, 1, '2026-05-19 16:00:25', '2026-05-19 16:00:25', NULL),
-(2, 2, NULL, 'tablette', 'tablette-1779206487479', 'blablaa', NULL, 0, 1, '2026-05-19 16:01:03', '2026-05-19 16:06:27', '2026-05-19 18:06:27'),
-(3, 3, NULL, 'fauteuil', 'fauteuil-1779206841355', 'balabalaa', NULL, 0, 1, '2026-05-19 16:07:21', '2026-05-19 16:07:21', NULL),
-(4, 4, NULL, 'electronique', 'electronique-1782132291314', NULL, NULL, 0, 1, '2026-06-22 12:44:51', '2026-06-22 12:44:51', NULL),
-(5, 5, NULL, 'fritures', 'fritures-1782223337333', NULL, NULL, 0, 1, '2026-06-23 14:02:17', '2026-06-23 14:02:17', NULL);
+INSERT INTO `categories` (`id`, `company_id`, `owner_id`, `parent_id`, `name`, `slug`, `description`, `image_url`, `sort_order`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 2, 2, NULL, 'telephone ', 'telephone-1779206425400', 'differente categorie de telephone du systeme ', NULL, 0, 1, '2026-05-19 16:00:25', '2026-08-03 11:38:09', NULL),
+(2, 2, 2, NULL, 'tablette', 'tablette-1779206487479', 'blablaa', NULL, 0, 1, '2026-05-19 16:01:03', '2026-08-03 11:38:09', '2026-05-19 18:06:27'),
+(3, 3, 2, NULL, 'fauteuil', 'fauteuil-1779206841355', 'balabalaa', NULL, 0, 1, '2026-05-19 16:07:21', '2026-08-03 11:38:09', NULL),
+(4, 4, 5, NULL, 'electronique', 'electronique-1782132291314', NULL, NULL, 0, 1, '2026-06-22 12:44:51', '2026-08-03 11:38:09', NULL),
+(5, 5, 5, NULL, 'fritures', 'fritures-1782223337333', NULL, NULL, 0, 1, '2026-06-23 14:02:17', '2026-08-03 11:38:09', NULL);
 
 -- --------------------------------------------------------
 
@@ -294,7 +295,27 @@ INSERT INTO `companies` (`id`, `uuid`, `name`, `slug`, `description`, `logo_url`
 (5, '33353811-3383-49ab-be2b-90a31a617fab', 'kaba_restau', 'kaba-restau-1782216374418', 'aucune', NULL, 3, 5, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '+2238289999', NULL, 1, '2026-06-23 12:06:14', '2026-07-22 11:05:55', NULL, NULL, NULL, NULL, NULL, 0, NULL),
 (6, 'f015513e-40b9-41d8-b760-c00c708686ad', 'Djessy ', 'djessy-1782307996307', NULL, NULL, 3, 1, 'active', NULL, 'Mali', 'Bamako ', '123', '72122412', NULL, 1, '2026-06-24 13:33:16', '2026-06-24 13:33:16', NULL, NULL, NULL, NULL, NULL, 0, NULL),
 (7, '23852cc8-4a5c-4993-bc08-f0fd7e1fe203', 'ib_dollars', 'ib-dollars-1783956353971', 'entreprise de vente de materiel ', NULL, 1, 1, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '+22382863000', NULL, 1, '2026-07-13 15:25:54', '2026-07-13 15:25:54', NULL, NULL, NULL, NULL, NULL, 0, NULL),
-(8, '5618099e-ab63-4c21-b1d8-d88e443aeb68', 'iba_shop', 'iba-shop-1784718832710', 'ma boutique cool', NULL, 1, 5, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '+223828632064', NULL, 1, '2026-07-22 11:13:52', '2026-07-22 11:13:52', NULL, NULL, NULL, NULL, NULL, 0, NULL);
+(8, '5618099e-ab63-4c21-b1d8-d88e443aeb68', 'iba_shop', 'iba-shop-1784718832710', 'ma boutique cool', NULL, 1, 5, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '+223828632064', NULL, 1, '2026-07-22 11:13:52', '2026-07-22 11:13:52', NULL, NULL, NULL, NULL, NULL, 0, NULL),
+(9, '11953091-9f02-40fa-898b-5dcc13a671f3', 'traore-shop', 'traore-shop-1785504961253', 'vente d\'articles pour home', NULL, 1, 1, 'active', NULL, 'Mali', 'Bamako', 'Bamako', '23221111', NULL, 1, '2026-07-31 13:36:01', '2026-07-31 13:36:01', NULL, NULL, NULL, NULL, NULL, 0, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `company_subscription_history`
+--
+
+CREATE TABLE `company_subscription_history` (
+  `id` bigint UNSIGNED NOT NULL,
+  `company_id` bigint UNSIGNED NOT NULL,
+  `plan_id` tinyint UNSIGNED NOT NULL,
+  `action` enum('new_subscription','renewed','upgraded','downgraded','expired','canceled') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `started_at` datetime NOT NULL,
+  `ends_at` datetime DEFAULT NULL,
+  `price_paid` decimal(12,2) DEFAULT '0.00',
+  `currency` varchar(3) COLLATE utf8mb4_unicode_ci DEFAULT 'XOF',
+  `notes` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -392,17 +413,34 @@ INSERT INTO `expenses` (`id`, `company_id`, `title`, `description`, `category`, 
 
 CREATE TABLE `inventory_counts` (
   `id` bigint UNSIGNED NOT NULL,
+  `reference` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `company_id` bigint UNSIGNED NOT NULL,
   `name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `status` enum('draft','in_progress','completed','validated') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'draft',
+  `scope_type` enum('all_products','by_category','by_supplier','manual') COLLATE utf8mb4_unicode_ci DEFAULT 'all_products',
+  `scope_ids` json DEFAULT NULL,
+  `status` enum('draft','in_progress','completed','validated','canceled') COLLATE utf8mb4_unicode_ci DEFAULT 'draft',
   `counted_by` bigint UNSIGNED DEFAULT NULL,
   `validated_by` bigint UNSIGNED DEFAULT NULL,
   `started_at` datetime DEFAULT NULL,
   `completed_at` datetime DEFAULT NULL,
   `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `total_products` int DEFAULT '0',
+  `total_discrepancies` int DEFAULT '0',
+  `total_discrepancy_value` decimal(14,2) DEFAULT '0.00',
+  `canceled_at` datetime DEFAULT NULL,
+  `canceled_by` bigint UNSIGNED DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `inventory_counts`
+--
+
+INSERT INTO `inventory_counts` (`id`, `reference`, `company_id`, `name`, `scope_type`, `scope_ids`, `status`, `counted_by`, `validated_by`, `started_at`, `completed_at`, `notes`, `total_products`, `total_discrepancies`, `total_discrepancy_value`, `canceled_at`, `canceled_by`, `created_at`, `updated_at`) VALUES
+(1, 'INV-202607-001', 4, 'inventaire mensuelle juillet 2026', 'all_products', NULL, 'validated', 5, 5, '2026-07-31 18:33:11', '2026-07-31 18:38:19', NULL, 4, 3, -290000.00, NULL, NULL, '2026-07-31 16:30:29', '2026-07-31 16:38:56'),
+(2, 'INV-202607-002', 4, 'inventaire fin aout 2026', 'all_products', NULL, 'canceled', 5, NULL, '2026-07-31 18:53:32', NULL, NULL, 0, 0, 0.00, '2026-07-31 19:07:12', 5, '2026-07-31 16:51:57', '2026-07-31 17:07:12'),
+(3, 'INV-202607-003', 4, 'invententaire fin septembre 2026', 'all_products', NULL, 'in_progress', 5, NULL, '2026-07-31 18:59:33', NULL, NULL, 0, 0, 0.00, NULL, NULL, '2026-07-31 16:53:12', '2026-07-31 16:59:33');
 
 -- --------------------------------------------------------
 
@@ -419,8 +457,31 @@ CREATE TABLE `inventory_count_items` (
   `counted_qty` decimal(12,3) DEFAULT NULL,
   `difference` decimal(12,3) DEFAULT NULL COMMENT 'counted - theoretical',
   `note` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `unit_cost` decimal(12,2) DEFAULT NULL,
+  `discrepancy_value` decimal(14,2) DEFAULT NULL,
+  `justification` enum('breakage','theft','loss','found','data_entry_error','supplier_error','other') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `justification_note` text COLLATE utf8mb4_unicode_ci,
+  `counted_at` datetime DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `inventory_count_items`
+--
+
+INSERT INTO `inventory_count_items` (`id`, `inventory_count_id`, `product_id`, `variant_id`, `theoretical_qty`, `counted_qty`, `difference`, `note`, `unit_cost`, `discrepancy_value`, `justification`, `justification_note`, `counted_at`, `created_at`) VALUES
+(1, 1, 3, NULL, 7.000, 6.000, -1.000, NULL, 200000.00, -200000.00, NULL, NULL, '2026-07-31 18:31:33', '2026-07-31 16:30:29'),
+(2, 1, 6, NULL, 20.000, 21.000, 1.000, NULL, 250000.00, 250000.00, NULL, NULL, '2026-07-31 18:31:37', '2026-07-31 16:30:29'),
+(3, 1, 4, NULL, 97.000, 95.000, -2.000, NULL, 170000.00, -340000.00, NULL, NULL, '2026-07-31 18:31:40', '2026-07-31 16:30:29'),
+(4, 1, 7, NULL, 110.000, 110.000, 0.000, NULL, 5000.00, 0.00, NULL, NULL, '2026-07-31 18:31:47', '2026-07-31 16:30:29'),
+(5, 2, 3, NULL, 6.000, 6.000, 0.000, NULL, 200000.00, 0.00, NULL, NULL, '2026-07-31 18:53:52', '2026-07-31 16:51:57'),
+(6, 2, 6, NULL, 21.000, 22.000, 1.000, NULL, 250000.00, 250000.00, 'found', NULL, '2026-07-31 18:53:54', '2026-07-31 16:51:57'),
+(7, 2, 4, NULL, 95.000, NULL, NULL, NULL, 170000.00, NULL, NULL, NULL, NULL, '2026-07-31 16:51:57'),
+(8, 2, 7, NULL, 110.000, NULL, NULL, NULL, 5000.00, NULL, NULL, NULL, NULL, '2026-07-31 16:51:57'),
+(9, 3, 3, NULL, 6.000, 3.000, -3.000, NULL, 200000.00, -600000.00, NULL, NULL, '2026-07-31 18:59:45', '2026-07-31 16:53:12'),
+(10, 3, 6, NULL, 21.000, 23.000, 2.000, NULL, 250000.00, 500000.00, NULL, NULL, '2026-07-31 18:59:51', '2026-07-31 16:53:12'),
+(11, 3, 4, NULL, 95.000, NULL, NULL, NULL, 170000.00, NULL, NULL, NULL, NULL, '2026-07-31 16:53:12'),
+(12, 3, 7, NULL, 110.000, NULL, NULL, NULL, 5000.00, NULL, NULL, NULL, NULL, '2026-07-31 16:53:12');
 
 -- --------------------------------------------------------
 
@@ -484,7 +545,10 @@ INSERT INTO `inventory_movements` (`id`, `company_id`, `product_id`, `variant_id
 (32, 4, 3, NULL, 'sale', -2.000, 9.000, 7.000, 'sale', 19, 200000.00, NULL, 5, '2026-07-22 16:38:31'),
 (33, 4, 3, NULL, 'return_customer', 1.000, 7.000, 8.000, 'sale', 19, 200000.00, NULL, 5, '2026-07-22 16:38:50'),
 (34, 4, 7, NULL, 'sale', -1.000, 111.000, 110.000, 'sale', 20, 5000.00, NULL, 10, '2026-07-23 10:38:01'),
-(35, 4, 3, NULL, 'sale', -1.000, 8.000, 7.000, 'sale', 21, 200000.00, NULL, 10, '2026-07-23 10:58:15');
+(35, 4, 3, NULL, 'sale', -1.000, 8.000, 7.000, 'sale', 21, 200000.00, NULL, 10, '2026-07-23 10:58:15'),
+(36, 4, 3, NULL, 'adjustment', -1.000, 7.000, 6.000, 'inventory_count', 1, 200000.00, '[Inventaire 1] Ajustement inventaire', 5, '2026-07-31 16:38:55'),
+(37, 4, 4, NULL, 'adjustment', -2.000, 97.000, 95.000, 'inventory_count', 1, 170000.00, '[Inventaire 1] Ajustement inventaire', 5, '2026-07-31 16:38:56'),
+(38, 4, 6, NULL, 'adjustment', 1.000, 20.000, 21.000, 'inventory_count', 1, 250000.00, '[Inventaire 1] Ajustement inventaire', 5, '2026-07-31 16:38:56');
 
 -- --------------------------------------------------------
 
@@ -524,6 +588,7 @@ CREATE TABLE `memberships` (
   `user_id` bigint UNSIGNED NOT NULL,
   `company_id` bigint UNSIGNED DEFAULT NULL,
   `role` enum('owner','manager','cashier','employee','super_admin') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `role_id` bigint UNSIGNED DEFAULT NULL,
   `custom_permissions` json DEFAULT NULL COMMENT '{"can_view_reports":true,"can_manage_products":false}',
   `invitation_token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `invited_at` datetime DEFAULT NULL,
@@ -537,19 +602,84 @@ CREATE TABLE `memberships` (
 -- Dumping data for table `memberships`
 --
 
-INSERT INTO `memberships` (`id`, `user_id`, `company_id`, `role`, `custom_permissions`, `invitation_token`, `invited_at`, `joined_at`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, 'owner', NULL, NULL, NULL, '2026-05-18 16:47:47', 1, '2026-05-18 14:47:47', '2026-05-18 14:47:47'),
-(2, 2, 2, 'owner', NULL, NULL, NULL, '2026-05-19 16:55:32', 1, '2026-05-19 14:55:32', '2026-05-19 14:55:32'),
-(3, 2, 3, 'owner', NULL, NULL, NULL, '2026-05-19 17:02:28', 1, '2026-05-19 15:02:28', '2026-05-19 15:02:28'),
-(4, 4, NULL, 'super_admin', NULL, NULL, NULL, NULL, 1, '2026-06-21 21:01:10', '2026-06-21 21:01:10'),
-(5, 5, 4, 'owner', NULL, NULL, NULL, '2026-06-22 02:42:50', 1, '2026-06-22 00:42:50', '2026-06-22 00:42:50'),
-(6, 5, 5, 'owner', NULL, NULL, NULL, '2026-06-23 14:06:14', 1, '2026-06-23 12:06:14', '2026-06-23 12:06:14'),
-(7, 6, 6, 'owner', NULL, NULL, NULL, '2026-06-24 13:33:16', 1, '2026-06-24 13:33:16', '2026-06-24 13:33:16'),
-(8, 7, 7, 'owner', NULL, NULL, NULL, '2026-07-13 15:25:54', 1, '2026-07-13 15:25:54', '2026-07-13 15:25:54'),
-(9, 8, 4, 'manager', NULL, NULL, NULL, '2026-07-21 19:36:27', 1, '2026-07-21 19:36:27', '2026-07-21 19:36:27'),
-(10, 9, 8, 'owner', NULL, NULL, NULL, '2026-07-22 11:13:52', 1, '2026-07-22 11:13:52', '2026-07-22 11:13:52'),
-(11, 10, 4, 'cashier', NULL, NULL, NULL, '2026-07-23 10:24:54', 1, '2026-07-23 10:24:54', '2026-07-23 10:24:54'),
-(12, 15, 8, 'manager', NULL, NULL, NULL, '2026-07-28 11:44:37', 1, '2026-07-28 11:44:37', '2026-07-28 11:44:37');
+INSERT INTO `memberships` (`id`, `user_id`, `company_id`, `role`, `role_id`, `custom_permissions`, `invitation_token`, `invited_at`, `joined_at`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 1, 1, 'owner', 1, NULL, NULL, NULL, '2026-05-18 16:47:47', 1, '2026-05-18 14:47:47', '2026-08-01 16:32:09'),
+(2, 2, 2, 'owner', 4, NULL, NULL, NULL, '2026-05-19 16:55:32', 1, '2026-05-19 14:55:32', '2026-08-01 16:32:09'),
+(3, 2, 3, 'owner', 7, NULL, NULL, NULL, '2026-05-19 17:02:28', 1, '2026-05-19 15:02:28', '2026-08-01 16:32:09'),
+(4, 4, NULL, 'super_admin', NULL, NULL, NULL, NULL, NULL, 1, '2026-06-21 21:01:10', '2026-06-21 21:01:10'),
+(5, 5, 4, 'owner', 10, NULL, NULL, NULL, '2026-06-22 02:42:50', 1, '2026-06-22 00:42:50', '2026-08-01 16:32:09'),
+(6, 5, 5, 'owner', 22, NULL, NULL, NULL, '2026-06-23 14:06:14', 1, '2026-06-23 12:06:14', '2026-08-01 16:32:10'),
+(7, 6, 6, 'owner', 25, NULL, NULL, NULL, '2026-06-24 13:33:16', 1, '2026-06-24 13:33:16', '2026-08-01 16:32:10'),
+(8, 7, 7, 'owner', 13, NULL, NULL, NULL, '2026-07-13 15:25:54', 1, '2026-07-13 15:25:54', '2026-08-01 16:32:10'),
+(9, 8, 4, 'manager', 11, NULL, NULL, NULL, '2026-07-21 19:36:27', 1, '2026-07-21 19:36:27', '2026-08-01 16:32:09'),
+(10, 9, 8, 'owner', 16, NULL, NULL, NULL, '2026-07-22 11:13:52', 1, '2026-07-22 11:13:52', '2026-08-01 16:32:10'),
+(11, 10, 4, 'cashier', 12, NULL, NULL, NULL, '2026-07-23 10:24:54', 1, '2026-07-23 10:24:54', '2026-08-01 16:32:09'),
+(12, 15, 8, 'manager', 17, NULL, NULL, NULL, '2026-07-28 11:44:37', 1, '2026-07-28 11:44:37', '2026-08-01 16:32:10'),
+(13, 16, 9, 'owner', 19, NULL, NULL, NULL, '2026-07-31 15:36:01', 1, '2026-07-31 13:36:01', '2026-08-01 16:32:10'),
+(14, 17, 4, 'owner', 28, NULL, NULL, NULL, '2026-08-01 21:28:43', 1, '2026-08-01 19:28:43', '2026-08-01 19:28:43');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `permissions`
+--
+
+CREATE TABLE `permissions` (
+  `id` bigint UNSIGNED NOT NULL,
+  `code` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `module` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `permissions`
+--
+
+INSERT INTO `permissions` (`id`, `code`, `module`, `name`, `description`) VALUES
+(1, 'dashboard.view', 'Tableau de bord', 'Voir le tableau de bord', 'Accès aux statistiques et métriques globales'),
+(2, 'products.view', 'Produits', 'Voir les produits', 'Consulter le catalogue de produits'),
+(3, 'products.create', 'Produits', 'Créer un produit', 'Ajouter de nouveaux produits'),
+(4, 'products.edit', 'Produits', 'Modifier un produit', 'Modifier les informations des produits'),
+(5, 'products.delete', 'Produits', 'Supprimer un produit', 'Supprimer ou archiver un produit'),
+(6, 'products.export', 'Produits', 'Exporter les produits', 'Exporter la liste des produits'),
+(7, 'products.view_cost', 'Produits', 'Voir le prix d\'achat', 'Autoriser la visualisation du prix d\'achat et des marges'),
+(8, 'sales.view', 'Ventes', 'Voir les ventes', 'Consulter l\'historique des ventes'),
+(9, 'sales.create', 'Ventes', 'Créer une vente', 'Enregistrer une nouvelle vente (Caisse)'),
+(10, 'sales.edit', 'Ventes', 'Modifier une vente', 'Modifier une vente existante'),
+(11, 'sales.delete', 'Ventes', 'Supprimer une vente', 'Supprimer une vente'),
+(12, 'sales.cancel', 'Ventes', 'Annuler une vente', 'Annuler une vente'),
+(13, 'sales.print', 'Ventes', 'Imprimer un ticket', 'Imprimer le ticket ou la facture'),
+(14, 'sales.export', 'Ventes', 'Exporter les ventes', 'Exporter l\'historique'),
+(15, 'sales.return', 'Ventes', 'Retour produit', 'Gérer les retours clients'),
+(16, 'sales.view_margin', 'Ventes', 'Voir les marges', 'Voir le bénéfice et la marge sur les ventes'),
+(17, 'purchases.view', 'Achats', 'Voir les achats', 'Consulter les bons de commande fournisseur'),
+(18, 'purchases.create', 'Achats', 'Créer un achat', 'Créer un bon de commande'),
+(19, 'purchases.edit', 'Achats', 'Modifier un achat', 'Modifier un bon de commande'),
+(20, 'purchases.delete', 'Achats', 'Supprimer un achat', 'Supprimer un bon de commande'),
+(21, 'purchases.receive', 'Achats', 'Réceptionner', 'Réceptionner les articles d\'un achat'),
+(22, 'inventory.view', 'Stocks', 'Voir le stock', 'Consulter les niveaux de stock'),
+(23, 'inventory.adjust', 'Stocks', 'Ajuster le stock', 'Faire des ajustements manuels'),
+(24, 'inventory.transfer', 'Stocks', 'Transférer', 'Transférer entre entrepôts'),
+(25, 'inventory.count', 'Stocks', 'Inventaire physique', 'Gérer les sessions d\'inventaire physique'),
+(26, 'warehouses.view', 'Entrepôts', 'Voir les entrepôts', 'Voir la liste des entrepôts'),
+(27, 'warehouses.create', 'Entrepôts', 'Créer un entrepôt', 'Ajouter un entrepôt'),
+(28, 'warehouses.edit', 'Entrepôts', 'Modifier un entrepôt', 'Modifier un entrepôt'),
+(29, 'warehouses.delete', 'Entrepôts', 'Supprimer un entrepôt', 'Supprimer un entrepôt'),
+(30, 'clients.view', 'Clients', 'Voir les clients', 'Consulter le fichier client'),
+(31, 'clients.create', 'Clients', 'Créer un client', 'Ajouter un client'),
+(32, 'clients.edit', 'Clients', 'Modifier un client', 'Modifier un client'),
+(33, 'clients.delete', 'Clients', 'Supprimer un client', 'Supprimer un client'),
+(34, 'suppliers.view', 'Fournisseurs', 'Voir les fournisseurs', 'Consulter les fournisseurs'),
+(35, 'suppliers.create', 'Fournisseurs', 'Créer un fournisseur', 'Ajouter un fournisseur'),
+(36, 'suppliers.edit', 'Fournisseurs', 'Modifier un fournisseur', 'Modifier un fournisseur'),
+(37, 'suppliers.delete', 'Fournisseurs', 'Supprimer un fournisseur', 'Supprimer un fournisseur'),
+(38, 'employees.view', 'Employés', 'Voir les employés', 'Voir la liste du personnel'),
+(39, 'employees.create', 'Employés', 'Créer un employé', 'Ajouter un nouvel employé'),
+(40, 'employees.edit', 'Employés', 'Modifier un employé', 'Gérer les employés'),
+(41, 'employees.delete', 'Employés', 'Supprimer un employé', 'Supprimer un employé'),
+(42, 'roles.manage', 'Employés', 'Gérer les rôles', 'Créer et modifier les rôles et permissions'),
+(43, 'settings.manage', 'Paramètres', 'Gérer les paramètres', 'Accès aux paramètres de l\'entreprise');
 
 -- --------------------------------------------------------
 
@@ -593,14 +723,16 @@ CREATE TABLE `products` (
 INSERT INTO `products` (`id`, `company_id`, `catalog_product_id`, `category_id`, `unit_id`, `name`, `slug`, `description`, `ingredients_text`, `barcode`, `sku`, `cost_price`, `retail_price`, `wholesale_price`, `wholesale_min_qty`, `allow_custom_price`, `product_type`, `manage_stock`, `current_stock`, `low_stock_threshold`, `is_active`, `is_available`, `image_url`, `created_at`, `updated_at`, `deleted_at`) VALUES
 (1, 2, NULL, 1, 1, 'produit test 1', 'produit-test-1-1779223077159', 'aucune', NULL, '2000247821435', 'AMP-PDFB0B', 10000.00, 11000.00, 10500.00, 5, 0, 'product', 1, 20.000, 10.000, 1, 1, 'http://localhost:5000/uploads/products/product-1779223077128-544221727.png', '2026-05-19 20:37:57', '2026-05-19 20:59:37', '2026-05-19 22:59:37'),
 (2, 2, NULL, 1, 1, 'produit test 2', 'produit-test-2-1779224262083', 'day 2 day ', NULL, '2000502621138', 'AMP-PDFB0C', 7500.00, 8500.00, 8000.00, 5, 0, 'product', 1, 24.000, 10.000, 1, 1, NULL, '2026-05-19 20:57:42', '2026-05-21 11:51:29', NULL),
-(3, 4, 3, 4, 1, 'iphone 13 pro', 'iphone-13-pro-1782133776087', 'telephone de marque apple', NULL, '', '', 200000.00, 200000.00, 195000.00, 1, 0, 'product', 1, 7.000, 4.000, 1, 1, NULL, '2026-06-22 12:46:09', '2026-07-23 10:58:15', NULL),
-(4, 4, NULL, 4, 1, 'ordinateur', 'ordinateur-1782133887203', 'ordi', NULL, NULL, NULL, 170000.00, 200000.00, 195000.00, 1, 0, 'product', 1, 97.000, 1.000, 1, 1, NULL, '2026-06-22 13:11:27', '2026-06-22 21:38:28', NULL),
+(3, 4, 3, 4, 1, 'iphone 13 pro', 'iphone-13-pro-1782133776087', 'telephone de marque apple', NULL, '', '', 200000.00, 200000.00, 195000.00, 1, 0, 'product', 1, 6.000, 4.000, 1, 1, NULL, '2026-06-22 12:46:09', '2026-07-31 16:38:55', NULL),
+(4, 4, NULL, 4, 1, 'ordinateur', 'ordinateur-1782133887203', 'ordi', NULL, NULL, NULL, 170000.00, 200000.00, 195000.00, 1, 0, 'product', 1, 95.000, 1.000, 1, 1, NULL, '2026-06-22 13:11:27', '2026-07-31 16:38:56', NULL),
 (5, 5, NULL, 5, 7, 'plat1-test', 'plat1-test-1782226978271', NULL, 'riz , viande , frittes', NULL, NULL, 0.00, 2000.00, 0.00, 1, 0, 'dish', 0, 0.000, 10.000, 1, 1, NULL, '2026-06-23 15:01:40', '2026-06-23 15:02:58', NULL),
-(6, 4, 2, 4, 1, 'iphone 14 pro', 'iphone-14-pro-1782250821426', 'aucune', NULL, NULL, NULL, 250000.00, 2500000.00, 245000.00, 1, 0, 'product', 1, 20.000, 10.000, 1, 1, 'http://global-visept-backend.onrender.com/uploads/products/product-1782250788984-669583536.png', '2026-06-23 21:39:49', '2026-07-21 14:59:42', NULL),
+(6, 4, 2, 4, 1, 'iphone 14 pro', 'iphone-14-pro-1782250821426', 'aucune', NULL, NULL, NULL, 250000.00, 2500000.00, 245000.00, 1, 0, 'product', 1, 21.000, 10.000, 1, 1, 'http://global-visept-backend.onrender.com/uploads/products/product-1782250788984-669583536.png', '2026-06-23 21:39:49', '2026-07-31 16:38:56', NULL),
 (7, 4, 1, 4, 1, 'test3', 'test3-1784645195182', 'mon produit cool', NULL, NULL, NULL, 5000.00, 7500.00, 7000.00, 10, 0, 'product', 1, 110.000, 5.000, 1, 1, NULL, '2026-07-21 14:46:11', '2026-07-23 10:38:01', NULL),
 (8, 8, 4, NULL, 1, 'tes', 'tes-1785239513531', 'werty', NULL, NULL, 'we456', 600.00, 800.00, 700.00, 1, 0, 'product', 1, 1000.000, 10.000, 1, 1, NULL, '2026-07-28 11:51:53', '2026-07-28 11:51:53', NULL),
 (9, 8, NULL, NULL, 1, 'rizs', 'rizs-1785283878160', 'aucune', NULL, NULL, NULL, 18000.00, 21000.00, 20000.00, 1, 0, 'product', 1, 250.000, 10.000, 1, 1, NULL, '2026-07-29 00:10:45', '2026-07-29 00:19:38', '2026-07-29 00:19:38'),
-(10, 8, 6, NULL, 1, 'rizs', 'rizs-1785284450150', NULL, NULL, NULL, NULL, 18000.00, 20000.00, 19000.00, 1, 0, 'product', 1, 100.000, 10.000, 1, 1, NULL, '2026-07-29 00:20:33', '2026-07-29 00:20:50', NULL);
+(10, 8, 6, NULL, 1, 'rizs', 'rizs-1785284450150', NULL, NULL, NULL, NULL, 18000.00, 20000.00, 19000.00, 1, 0, 'product', 1, 100.000, 10.000, 1, 1, NULL, '2026-07-29 00:20:33', '2026-07-29 00:20:50', NULL),
+(11, 4, NULL, NULL, 1, 'iphone 11 pro', 'iphone-11-pro-1785612588156', 'blablaa', NULL, NULL, NULL, 0.00, 0.00, 0.00, 1, 0, 'product', 1, 0.000, 10.000, 1, 1, NULL, '2026-08-01 19:29:48', '2026-08-01 19:29:56', '2026-08-01 21:29:56'),
+(12, 4, 8, NULL, 1, 'test2', 'test2-1785762467531', 'aucune', NULL, NULL, NULL, 0.00, 0.00, 0.00, 1, 0, 'product', 1, 0.000, 10.000, 1, 1, NULL, '2026-08-03 13:07:47', '2026-08-03 13:07:47', NULL);
 
 -- --------------------------------------------------------
 
@@ -617,6 +749,7 @@ CREATE TABLE `product_catalog` (
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   `image_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `unit_id` smallint UNSIGNED NOT NULL DEFAULT '1',
+  `category_id` bigint UNSIGNED DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -627,12 +760,13 @@ CREATE TABLE `product_catalog` (
 -- Dumping data for table `product_catalog`
 --
 
-INSERT INTO `product_catalog` (`id`, `owner_id`, `name`, `slug`, `barcode`, `description`, `image_url`, `unit_id`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(1, 5, 'test3', 'test3', NULL, 'mon produit cool', NULL, 1, 1, '2026-07-21 14:46:11', '2026-07-21 14:46:11', NULL),
-(2, 5, 'iphone 14 pro', 'iphone-14-pro', NULL, 'aucune', 'http://global-visept-backend.onrender.com/uploads/products/product-1782250788984-669583536.png', 1, 1, '2026-07-21 14:59:42', '2026-07-21 14:59:42', NULL),
-(3, 5, 'iphone 13 pro', 'iphone-13-pro', NULL, 'telephone de marque apple', NULL, 1, 1, '2026-07-21 14:59:43', '2026-07-21 14:59:43', NULL),
-(4, 9, 'tes', 'tes', NULL, 'werty', NULL, 1, 1, '2026-07-28 11:51:53', '2026-07-28 11:51:53', NULL),
-(6, 9, 'rizs', 'riz', NULL, NULL, NULL, 1, 1, '2026-07-29 00:20:33', '2026-07-29 00:20:50', NULL);
+INSERT INTO `product_catalog` (`id`, `owner_id`, `name`, `slug`, `barcode`, `description`, `image_url`, `unit_id`, `category_id`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 5, 'test3', 'test3', NULL, 'mon produit cool', NULL, 1, 4, 1, '2026-07-21 14:46:11', '2026-08-03 11:39:18', NULL),
+(2, 5, 'iphone 14 pro', 'iphone-14-pro', NULL, 'aucune', 'http://global-visept-backend.onrender.com/uploads/products/product-1782250788984-669583536.png', 1, 4, 1, '2026-07-21 14:59:42', '2026-08-03 11:39:18', NULL),
+(3, 5, 'iphone 13 pro', 'iphone-13-pro', NULL, 'telephone de marque apple', NULL, 1, 4, 1, '2026-07-21 14:59:43', '2026-08-03 11:39:18', NULL),
+(4, 9, 'tes', 'tes', NULL, 'werty', NULL, 1, NULL, 1, '2026-07-28 11:51:53', '2026-07-28 11:51:53', NULL),
+(6, 9, 'rizs', 'riz', NULL, NULL, NULL, 1, NULL, 1, '2026-07-29 00:20:33', '2026-07-29 00:20:50', NULL),
+(8, 5, 'test2', 'test2', NULL, 'aucune', NULL, 1, NULL, 1, '2026-08-03 13:07:47', '2026-08-03 13:07:47', NULL);
 
 -- --------------------------------------------------------
 
@@ -693,6 +827,902 @@ CREATE TABLE `restaurant_tables` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `roles`
+--
+
+CREATE TABLE `roles` (
+  `id` bigint UNSIGNED NOT NULL,
+  `company_id` bigint UNSIGNED NOT NULL,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `is_system` tinyint(1) DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `roles`
+--
+
+INSERT INTO `roles` (`id`, `company_id`, `name`, `description`, `is_system`, `created_at`, `updated_at`) VALUES
+(1, 1, 'Propriétaire', 'Tous les droits sur l\'entreprise', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(2, 1, 'Gérant', 'Gestion complète sauf paramètres', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(3, 1, 'Caissier', 'Encaissement et ventes uniquement', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(4, 2, 'Propriétaire', 'Tous les droits sur l\'entreprise', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(5, 2, 'Gérant', 'Gestion complète sauf paramètres', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(6, 2, 'Caissier', 'Encaissement et ventes uniquement', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(7, 3, 'Propriétaire', 'Tous les droits sur l\'entreprise', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(8, 3, 'Gérant', 'Gestion complète sauf paramètres', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(9, 3, 'Caissier', 'Encaissement et ventes uniquement', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(10, 4, 'Propriétaire', 'Tous les droits sur l\'entreprise', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(11, 4, 'Gérant', 'Gestion complète sauf paramètres', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(12, 4, 'Caissier', 'Encaissement et ventes uniquement', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(13, 7, 'Propriétaire', 'Tous les droits sur l\'entreprise', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(14, 7, 'Gérant', 'Gestion complète sauf paramètres', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(15, 7, 'Caissier', 'Encaissement et ventes uniquement', 1, '2026-08-01 16:32:09', '2026-08-01 16:32:09'),
+(16, 8, 'Propriétaire', 'Tous les droits sur l\'entreprise', 1, '2026-08-01 16:32:10', '2026-08-01 16:32:10'),
+(17, 8, 'Gérant', 'Gestion complète sauf paramètres', 1, '2026-08-01 16:32:10', '2026-08-01 16:32:10'),
+(18, 8, 'Caissier', 'Encaissement et ventes uniquement', 1, '2026-08-01 16:32:10', '2026-08-01 16:32:10'),
+(19, 9, 'Propriétaire', 'Tous les droits sur l\'entreprise', 1, '2026-08-01 16:32:10', '2026-08-01 16:32:10'),
+(20, 9, 'Gérant', 'Gestion complète sauf paramètres', 1, '2026-08-01 16:32:10', '2026-08-01 16:32:10'),
+(21, 9, 'Caissier', 'Encaissement et ventes uniquement', 1, '2026-08-01 16:32:10', '2026-08-01 16:32:10'),
+(22, 5, 'Propriétaire', 'Tous les droits sur l\'entreprise', 1, '2026-08-01 16:32:10', '2026-08-01 16:32:10'),
+(23, 5, 'Gérant', 'Gestion complète sauf paramètres', 1, '2026-08-01 16:32:10', '2026-08-01 16:32:10'),
+(24, 5, 'Caissier', 'Encaissement et ventes uniquement', 1, '2026-08-01 16:32:10', '2026-08-01 16:32:10'),
+(25, 6, 'Propriétaire', 'Tous les droits sur l\'entreprise', 1, '2026-08-01 16:32:10', '2026-08-01 16:32:10'),
+(26, 6, 'Gérant', 'Gestion complète sauf paramètres', 1, '2026-08-01 16:32:10', '2026-08-01 16:32:10'),
+(27, 6, 'Caissier', 'Encaissement et ventes uniquement', 1, '2026-08-01 16:32:10', '2026-08-01 16:32:10'),
+(28, 4, 'gestionnaire de stock', 'il gere les commandes fournisseurs, les receptions et les transfert entrepot vers boutique et boutique vers entrepot', 0, '2026-08-01 19:26:50', '2026-08-01 19:26:50');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `role_permissions`
+--
+
+CREATE TABLE `role_permissions` (
+  `role_id` bigint UNSIGNED NOT NULL,
+  `permission_id` bigint UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `role_permissions`
+--
+
+INSERT INTO `role_permissions` (`role_id`, `permission_id`) VALUES
+(1, 1),
+(2, 1),
+(3, 1),
+(4, 1),
+(5, 1),
+(6, 1),
+(7, 1),
+(8, 1),
+(9, 1),
+(10, 1),
+(11, 1),
+(12, 1),
+(13, 1),
+(14, 1),
+(15, 1),
+(16, 1),
+(17, 1),
+(18, 1),
+(19, 1),
+(20, 1),
+(21, 1),
+(22, 1),
+(23, 1),
+(24, 1),
+(25, 1),
+(26, 1),
+(27, 1),
+(1, 2),
+(2, 2),
+(3, 2),
+(4, 2),
+(5, 2),
+(6, 2),
+(7, 2),
+(8, 2),
+(9, 2),
+(10, 2),
+(11, 2),
+(12, 2),
+(13, 2),
+(14, 2),
+(15, 2),
+(16, 2),
+(17, 2),
+(18, 2),
+(19, 2),
+(20, 2),
+(21, 2),
+(22, 2),
+(23, 2),
+(24, 2),
+(25, 2),
+(26, 2),
+(27, 2),
+(28, 2),
+(1, 3),
+(2, 3),
+(4, 3),
+(5, 3),
+(7, 3),
+(8, 3),
+(10, 3),
+(11, 3),
+(13, 3),
+(14, 3),
+(16, 3),
+(17, 3),
+(19, 3),
+(20, 3),
+(22, 3),
+(23, 3),
+(25, 3),
+(26, 3),
+(1, 4),
+(2, 4),
+(4, 4),
+(5, 4),
+(7, 4),
+(8, 4),
+(10, 4),
+(11, 4),
+(13, 4),
+(14, 4),
+(16, 4),
+(17, 4),
+(19, 4),
+(20, 4),
+(22, 4),
+(23, 4),
+(25, 4),
+(26, 4),
+(1, 5),
+(2, 5),
+(4, 5),
+(5, 5),
+(7, 5),
+(8, 5),
+(10, 5),
+(11, 5),
+(13, 5),
+(14, 5),
+(16, 5),
+(17, 5),
+(19, 5),
+(20, 5),
+(22, 5),
+(23, 5),
+(25, 5),
+(26, 5),
+(1, 6),
+(2, 6),
+(4, 6),
+(5, 6),
+(7, 6),
+(8, 6),
+(10, 6),
+(11, 6),
+(13, 6),
+(14, 6),
+(16, 6),
+(17, 6),
+(19, 6),
+(20, 6),
+(22, 6),
+(23, 6),
+(25, 6),
+(26, 6),
+(28, 6),
+(1, 7),
+(2, 7),
+(4, 7),
+(5, 7),
+(7, 7),
+(8, 7),
+(10, 7),
+(11, 7),
+(13, 7),
+(14, 7),
+(16, 7),
+(17, 7),
+(19, 7),
+(20, 7),
+(22, 7),
+(23, 7),
+(25, 7),
+(26, 7),
+(28, 7),
+(1, 8),
+(2, 8),
+(3, 8),
+(4, 8),
+(5, 8),
+(6, 8),
+(7, 8),
+(8, 8),
+(9, 8),
+(10, 8),
+(11, 8),
+(12, 8),
+(13, 8),
+(14, 8),
+(15, 8),
+(16, 8),
+(17, 8),
+(18, 8),
+(19, 8),
+(20, 8),
+(21, 8),
+(22, 8),
+(23, 8),
+(24, 8),
+(25, 8),
+(26, 8),
+(27, 8),
+(1, 9),
+(2, 9),
+(3, 9),
+(4, 9),
+(5, 9),
+(6, 9),
+(7, 9),
+(8, 9),
+(9, 9),
+(10, 9),
+(11, 9),
+(12, 9),
+(13, 9),
+(14, 9),
+(15, 9),
+(16, 9),
+(17, 9),
+(18, 9),
+(19, 9),
+(20, 9),
+(21, 9),
+(22, 9),
+(23, 9),
+(24, 9),
+(25, 9),
+(26, 9),
+(27, 9),
+(1, 10),
+(2, 10),
+(4, 10),
+(5, 10),
+(7, 10),
+(8, 10),
+(10, 10),
+(11, 10),
+(13, 10),
+(14, 10),
+(16, 10),
+(17, 10),
+(19, 10),
+(20, 10),
+(22, 10),
+(23, 10),
+(25, 10),
+(26, 10),
+(1, 11),
+(2, 11),
+(4, 11),
+(5, 11),
+(7, 11),
+(8, 11),
+(10, 11),
+(11, 11),
+(13, 11),
+(14, 11),
+(16, 11),
+(17, 11),
+(19, 11),
+(20, 11),
+(22, 11),
+(23, 11),
+(25, 11),
+(26, 11),
+(1, 12),
+(2, 12),
+(4, 12),
+(5, 12),
+(7, 12),
+(8, 12),
+(10, 12),
+(11, 12),
+(13, 12),
+(14, 12),
+(16, 12),
+(17, 12),
+(19, 12),
+(20, 12),
+(22, 12),
+(23, 12),
+(25, 12),
+(26, 12),
+(1, 13),
+(2, 13),
+(3, 13),
+(4, 13),
+(5, 13),
+(6, 13),
+(7, 13),
+(8, 13),
+(9, 13),
+(10, 13),
+(11, 13),
+(12, 13),
+(13, 13),
+(14, 13),
+(15, 13),
+(16, 13),
+(17, 13),
+(18, 13),
+(19, 13),
+(20, 13),
+(21, 13),
+(22, 13),
+(23, 13),
+(24, 13),
+(25, 13),
+(26, 13),
+(27, 13),
+(1, 14),
+(2, 14),
+(4, 14),
+(5, 14),
+(7, 14),
+(8, 14),
+(10, 14),
+(11, 14),
+(13, 14),
+(14, 14),
+(16, 14),
+(17, 14),
+(19, 14),
+(20, 14),
+(22, 14),
+(23, 14),
+(25, 14),
+(26, 14),
+(1, 15),
+(2, 15),
+(3, 15),
+(4, 15),
+(5, 15),
+(6, 15),
+(7, 15),
+(8, 15),
+(9, 15),
+(10, 15),
+(11, 15),
+(12, 15),
+(13, 15),
+(14, 15),
+(15, 15),
+(16, 15),
+(17, 15),
+(18, 15),
+(19, 15),
+(20, 15),
+(21, 15),
+(22, 15),
+(23, 15),
+(24, 15),
+(25, 15),
+(26, 15),
+(27, 15),
+(1, 16),
+(2, 16),
+(4, 16),
+(5, 16),
+(7, 16),
+(8, 16),
+(10, 16),
+(11, 16),
+(13, 16),
+(14, 16),
+(16, 16),
+(17, 16),
+(19, 16),
+(20, 16),
+(22, 16),
+(23, 16),
+(25, 16),
+(26, 16),
+(1, 17),
+(2, 17),
+(4, 17),
+(5, 17),
+(7, 17),
+(8, 17),
+(10, 17),
+(11, 17),
+(13, 17),
+(14, 17),
+(16, 17),
+(17, 17),
+(19, 17),
+(20, 17),
+(22, 17),
+(23, 17),
+(25, 17),
+(26, 17),
+(28, 17),
+(1, 18),
+(2, 18),
+(4, 18),
+(5, 18),
+(7, 18),
+(8, 18),
+(10, 18),
+(11, 18),
+(13, 18),
+(14, 18),
+(16, 18),
+(17, 18),
+(19, 18),
+(20, 18),
+(22, 18),
+(23, 18),
+(25, 18),
+(26, 18),
+(28, 18),
+(1, 19),
+(2, 19),
+(4, 19),
+(5, 19),
+(7, 19),
+(8, 19),
+(10, 19),
+(11, 19),
+(13, 19),
+(14, 19),
+(16, 19),
+(17, 19),
+(19, 19),
+(20, 19),
+(22, 19),
+(23, 19),
+(25, 19),
+(26, 19),
+(28, 19),
+(1, 20),
+(2, 20),
+(4, 20),
+(5, 20),
+(7, 20),
+(8, 20),
+(10, 20),
+(11, 20),
+(13, 20),
+(14, 20),
+(16, 20),
+(17, 20),
+(19, 20),
+(20, 20),
+(22, 20),
+(23, 20),
+(25, 20),
+(26, 20),
+(1, 21),
+(2, 21),
+(4, 21),
+(5, 21),
+(7, 21),
+(8, 21),
+(10, 21),
+(11, 21),
+(13, 21),
+(14, 21),
+(16, 21),
+(17, 21),
+(19, 21),
+(20, 21),
+(22, 21),
+(23, 21),
+(25, 21),
+(26, 21),
+(28, 21),
+(1, 22),
+(2, 22),
+(4, 22),
+(5, 22),
+(7, 22),
+(8, 22),
+(10, 22),
+(11, 22),
+(13, 22),
+(14, 22),
+(16, 22),
+(17, 22),
+(19, 22),
+(20, 22),
+(22, 22),
+(23, 22),
+(25, 22),
+(26, 22),
+(28, 22),
+(1, 23),
+(2, 23),
+(4, 23),
+(5, 23),
+(7, 23),
+(8, 23),
+(10, 23),
+(11, 23),
+(13, 23),
+(14, 23),
+(16, 23),
+(17, 23),
+(19, 23),
+(20, 23),
+(22, 23),
+(23, 23),
+(25, 23),
+(26, 23),
+(28, 23),
+(1, 24),
+(2, 24),
+(4, 24),
+(5, 24),
+(7, 24),
+(8, 24),
+(10, 24),
+(11, 24),
+(13, 24),
+(14, 24),
+(16, 24),
+(17, 24),
+(19, 24),
+(20, 24),
+(22, 24),
+(23, 24),
+(25, 24),
+(26, 24),
+(28, 24),
+(1, 25),
+(2, 25),
+(4, 25),
+(5, 25),
+(7, 25),
+(8, 25),
+(10, 25),
+(11, 25),
+(13, 25),
+(14, 25),
+(16, 25),
+(17, 25),
+(19, 25),
+(20, 25),
+(22, 25),
+(23, 25),
+(25, 25),
+(26, 25),
+(28, 25),
+(1, 26),
+(2, 26),
+(4, 26),
+(5, 26),
+(7, 26),
+(8, 26),
+(10, 26),
+(11, 26),
+(13, 26),
+(14, 26),
+(16, 26),
+(17, 26),
+(19, 26),
+(20, 26),
+(22, 26),
+(23, 26),
+(25, 26),
+(26, 26),
+(28, 26),
+(1, 27),
+(2, 27),
+(4, 27),
+(5, 27),
+(7, 27),
+(8, 27),
+(10, 27),
+(11, 27),
+(13, 27),
+(14, 27),
+(16, 27),
+(17, 27),
+(19, 27),
+(20, 27),
+(22, 27),
+(23, 27),
+(25, 27),
+(26, 27),
+(28, 27),
+(1, 28),
+(2, 28),
+(4, 28),
+(5, 28),
+(7, 28),
+(8, 28),
+(10, 28),
+(11, 28),
+(13, 28),
+(14, 28),
+(16, 28),
+(17, 28),
+(19, 28),
+(20, 28),
+(22, 28),
+(23, 28),
+(25, 28),
+(26, 28),
+(28, 28),
+(1, 29),
+(2, 29),
+(4, 29),
+(5, 29),
+(7, 29),
+(8, 29),
+(10, 29),
+(11, 29),
+(13, 29),
+(14, 29),
+(16, 29),
+(17, 29),
+(19, 29),
+(20, 29),
+(22, 29),
+(23, 29),
+(25, 29),
+(26, 29),
+(28, 29),
+(1, 30),
+(2, 30),
+(4, 30),
+(5, 30),
+(7, 30),
+(8, 30),
+(10, 30),
+(11, 30),
+(13, 30),
+(14, 30),
+(16, 30),
+(17, 30),
+(19, 30),
+(20, 30),
+(22, 30),
+(23, 30),
+(25, 30),
+(26, 30),
+(1, 31),
+(2, 31),
+(4, 31),
+(5, 31),
+(7, 31),
+(8, 31),
+(10, 31),
+(11, 31),
+(13, 31),
+(14, 31),
+(16, 31),
+(17, 31),
+(19, 31),
+(20, 31),
+(22, 31),
+(23, 31),
+(25, 31),
+(26, 31),
+(1, 32),
+(2, 32),
+(4, 32),
+(5, 32),
+(7, 32),
+(8, 32),
+(10, 32),
+(11, 32),
+(13, 32),
+(14, 32),
+(16, 32),
+(17, 32),
+(19, 32),
+(20, 32),
+(22, 32),
+(23, 32),
+(25, 32),
+(26, 32),
+(1, 33),
+(2, 33),
+(4, 33),
+(5, 33),
+(7, 33),
+(8, 33),
+(10, 33),
+(11, 33),
+(13, 33),
+(14, 33),
+(16, 33),
+(17, 33),
+(19, 33),
+(20, 33),
+(22, 33),
+(23, 33),
+(25, 33),
+(26, 33),
+(1, 34),
+(2, 34),
+(4, 34),
+(5, 34),
+(7, 34),
+(8, 34),
+(10, 34),
+(11, 34),
+(13, 34),
+(14, 34),
+(16, 34),
+(17, 34),
+(19, 34),
+(20, 34),
+(22, 34),
+(23, 34),
+(25, 34),
+(26, 34),
+(28, 34),
+(1, 35),
+(2, 35),
+(4, 35),
+(5, 35),
+(7, 35),
+(8, 35),
+(10, 35),
+(11, 35),
+(13, 35),
+(14, 35),
+(16, 35),
+(17, 35),
+(19, 35),
+(20, 35),
+(22, 35),
+(23, 35),
+(25, 35),
+(26, 35),
+(28, 35),
+(1, 36),
+(2, 36),
+(4, 36),
+(5, 36),
+(7, 36),
+(8, 36),
+(10, 36),
+(11, 36),
+(13, 36),
+(14, 36),
+(16, 36),
+(17, 36),
+(19, 36),
+(20, 36),
+(22, 36),
+(23, 36),
+(25, 36),
+(26, 36),
+(28, 36),
+(1, 37),
+(2, 37),
+(4, 37),
+(5, 37),
+(7, 37),
+(8, 37),
+(10, 37),
+(11, 37),
+(13, 37),
+(14, 37),
+(16, 37),
+(17, 37),
+(19, 37),
+(20, 37),
+(22, 37),
+(23, 37),
+(25, 37),
+(26, 37),
+(28, 37),
+(1, 38),
+(2, 38),
+(4, 38),
+(5, 38),
+(7, 38),
+(8, 38),
+(10, 38),
+(11, 38),
+(13, 38),
+(14, 38),
+(16, 38),
+(17, 38),
+(19, 38),
+(20, 38),
+(22, 38),
+(23, 38),
+(25, 38),
+(26, 38),
+(1, 39),
+(2, 39),
+(4, 39),
+(5, 39),
+(7, 39),
+(8, 39),
+(10, 39),
+(11, 39),
+(13, 39),
+(14, 39),
+(16, 39),
+(17, 39),
+(19, 39),
+(20, 39),
+(22, 39),
+(23, 39),
+(25, 39),
+(26, 39),
+(1, 40),
+(2, 40),
+(4, 40),
+(5, 40),
+(7, 40),
+(8, 40),
+(10, 40),
+(11, 40),
+(13, 40),
+(14, 40),
+(16, 40),
+(17, 40),
+(19, 40),
+(20, 40),
+(22, 40),
+(23, 40),
+(25, 40),
+(26, 40),
+(1, 41),
+(2, 41),
+(4, 41),
+(5, 41),
+(7, 41),
+(8, 41),
+(10, 41),
+(11, 41),
+(13, 41),
+(14, 41),
+(16, 41),
+(17, 41),
+(19, 41),
+(20, 41),
+(22, 41),
+(23, 41),
+(25, 41),
+(26, 41),
+(1, 42),
+(4, 42),
+(7, 42),
+(10, 42),
+(13, 42),
+(16, 42),
+(19, 42),
+(22, 42),
+(25, 42),
+(1, 43),
+(4, 43),
+(7, 43),
+(10, 43),
+(13, 43),
+(16, 43),
+(19, 43),
+(22, 43),
+(25, 43);
 
 -- --------------------------------------------------------
 
@@ -961,11 +1991,11 @@ CREATE TABLE `subscription_plans` (
 --
 
 INSERT INTO `subscription_plans` (`id`, `code`, `name`, `price_monthly`, `price_yearly`, `max_employees`, `max_products`, `max_clients`, `features`, `is_active`, `is_admin_only`, `created_at`, `updated_at`) VALUES
-(1, 'FREE', 'Gratuit', 0.00, 0.00, 2, 50, 100, '{\"reports\": false, \"suppliers\": false, \"api_access\": false, \"promotions\": false, \"advanced_stock\": false}', 1, 0, '2026-05-07 13:10:46', '2026-05-07 13:10:46'),
-(2, 'STANDARD', 'Standard', 10000.00, 100000.00, 10, 500, 1000, '{\"reports\": true, \"suppliers\": true, \"api_access\": false, \"promotions\": false, \"advanced_stock\": false}', 1, 0, '2026-05-07 13:10:46', '2026-06-21 23:22:38'),
-(3, 'PREMIUM', 'Premium', 25000.00, 250000.00, NULL, NULL, NULL, '{\"reports\": true, \"suppliers\": true, \"api_access\": true, \"promotions\": true, \"advanced_stock\": true}', 1, 0, '2026-05-07 13:10:46', '2026-06-21 23:23:27'),
-(4, 'ORG', 'test', 5000.00, 60000.00, 3, 5, 5, '{\"reports\": false, \"suppliers\": false, \"api_access\": false, \"promotions\": false, \"advanced_stock\": false}', 1, 0, '2026-06-21 23:18:11', '2026-06-21 23:25:34'),
-(5, 'UNLIMITED', 'Illimité Admin', 0.00, 0.00, NULL, NULL, NULL, '{\"reports\": true, \"suppliers\": true, \"api_access\": true, \"promotions\": true, \"advanced_stock\": true}', 1, 1, '2026-07-22 10:31:31', '2026-07-22 10:31:31');
+(1, 'FREE', 'Gratuit', 0.00, 0.00, 0, 50, 100, '{\"reports\": false, \"employees\": false, \"suppliers\": false, \"api_access\": false, \"promotions\": false, \"warehouses\": false, \"advanced_stock\": false, \"module_returns\": false, \"product_returns\": false, \"advanced_reports\": false, \"module_employees\": false, \"module_warehouses\": false}', 1, 0, '2026-05-07 13:10:46', '2026-07-31 13:02:45'),
+(2, 'STANDARD', 'Standard', 10000.00, 100000.00, 2, 500, 1000, '{\"reports\": true, \"suppliers\": true, \"api_access\": false, \"promotions\": false, \"advanced_stock\": false, \"module_returns\": true, \"advanced_reports\": true, \"module_employees\": true, \"module_warehouses\": true}', 1, 0, '2026-05-07 13:10:46', '2026-07-31 13:02:45'),
+(3, 'PREMIUM', 'Premium', 25000.00, 250000.00, NULL, NULL, NULL, '{\"reports\": true, \"suppliers\": true, \"api_access\": true, \"promotions\": true, \"advanced_stock\": true, \"module_returns\": true, \"advanced_reports\": true, \"module_employees\": true, \"module_warehouses\": true}', 1, 0, '2026-05-07 13:10:46', '2026-07-31 13:02:45'),
+(4, 'ORG', 'test', 5000.00, 60000.00, 3, 5, 5, '{\"reports\": false, \"suppliers\": false, \"api_access\": false, \"promotions\": false, \"advanced_stock\": false, \"module_returns\": true, \"advanced_reports\": true, \"module_employees\": true, \"module_warehouses\": true}', 1, 0, '2026-06-21 23:18:11', '2026-07-31 13:02:45'),
+(5, 'UNLIMITED', 'Illimité Admin', 0.00, 0.00, NULL, NULL, NULL, '{\"reports\": true, \"suppliers\": true, \"api_access\": true, \"promotions\": true, \"advanced_stock\": true, \"module_returns\": true, \"advanced_reports\": true, \"module_employees\": true, \"module_warehouses\": true}', 1, 1, '2026-07-22 10:31:31', '2026-07-31 13:02:45');
 
 -- --------------------------------------------------------
 
@@ -1151,13 +2181,15 @@ INSERT INTO `users` (`id`, `first_name`, `last_name`, `email`, `phone`, `passwor
 (2, 'isac', 'diarra', 'isac@gmail.com', '70667847', '$2b$10$UR4EenIE7.1HPIBC82xCYedaXB8oDdB7RRtyT8mvizsQytqx6rXvi', NULL, NULL, NULL, NULL, 'fr', 1, '2026-05-19 13:42:27', '2026-05-19 13:42:27', 0),
 (3, 'Sounkalo', 'Sidibe', 'sidibe@hotmail.com', '8286320600', '$2b$10$Rdiikyrox5lBqaNf4pgSVOExnHIWeMlXoC/TJiSpZ11qR855AZY6u', NULL, NULL, '2026-06-19 15:32:29', NULL, 'fr', 1, '2026-06-19 13:32:29', '2026-06-19 13:32:29', 0),
 (4, 'super', 'Administrateur', 'super_admin@gmail.com', '98778899', '$2b$10$UR4EenIE7.1HPIBC82xCYedaXB8oDdB7RRtyT8mvizsQytqx6rXvi', NULL, NULL, '2026-07-22 11:11:18', NULL, 'fr', 1, '2026-06-21 21:00:32', '2026-07-22 11:11:18', 0),
-(5, 'kaba', 'traore', 'kaba@gmail.com', '65009060', '$2b$10$gNQ8L4RfTi.T3cJt2rlLf.7Q6PnoRxqEz3qD9oAqUuiFWnakb0A32', NULL, NULL, '2026-07-22 14:33:42', NULL, 'fr', 1, '2026-06-22 00:31:02', '2026-07-22 14:33:42', 1),
+(5, 'kaba', 'traore', 'kaba@gmail.com', '65009060', '$2b$10$gNQ8L4RfTi.T3cJt2rlLf.7Q6PnoRxqEz3qD9oAqUuiFWnakb0A32', NULL, NULL, '2026-08-03 14:52:20', NULL, 'fr', 1, '2026-06-22 00:31:02', '2026-08-03 12:52:20', 1),
 (6, 'Diallo ', 'Sidi', 'puralova29@gmail.com', '72122412', '$2b$10$e99DJhKhAqit7u5m.BHll..GGg70Ir/XQOXymsIbc1h60XpZUgDoe', NULL, NULL, NULL, NULL, 'fr', 1, '2026-06-24 13:32:15', '2026-06-24 13:32:15', 0),
 (7, 'ibrahim', 'diarra', 'ibradiarra@gmail.com', '+22382863288', '$2b$10$3cZis.ycVrpte0IWhBv93OZpiTEIlEULzqDQHWj5uRL4K/13.vH/2', NULL, NULL, NULL, NULL, 'fr', 1, '2026-07-13 15:24:00', '2026-07-13 15:24:00', 0),
 (8, 'issa kaba', 'traore', 'issakaba@gmail.com', '00876544', '$2b$10$RKYlZrl2prGDUp0IyBP32.AaOnsaq1YAKudERlX7q9KkBJk5isen2', NULL, NULL, '2026-07-21 19:37:02', NULL, 'fr', 1, '2026-07-21 19:36:27', '2026-07-21 19:37:02', 0),
-(9, 'iba', 'soumano', 'ibasoumano@gmail.com', '78482906', '$2b$10$Mn/5sjI1IpmBVBiWCDyACuxwmCQfdXx.ZL.D//bQNy..diGyEBL9e', NULL, NULL, '2026-07-28 12:20:26', NULL, 'fr', 1, '2026-07-22 11:12:30', '2026-07-28 12:20:26', 1),
+(9, 'iba', 'soumano', 'ibasoumano@gmail.com', '78482906', '$2b$10$Mn/5sjI1IpmBVBiWCDyACuxwmCQfdXx.ZL.D//bQNy..diGyEBL9e', NULL, NULL, '2026-07-31 16:58:50', NULL, 'fr', 1, '2026-07-22 11:12:30', '2026-07-31 14:58:50', 1),
 (10, 'ibrahim', 'traore', 'traore@gmail.com', '32234566', '$2b$10$iihsHgXA8SDP4xPgWSC0KeJbJzcPkEqh7OIhGKIIfjF9aiLmZs4f2', NULL, NULL, '2026-07-23 11:33:07', NULL, 'fr', 1, '2026-07-23 10:24:54', '2026-07-23 11:33:07', 0),
-(15, 'Gabrielle', 'toure', 'gab@gmail.con', NULL, '$2b$10$SB/hxOq4Pp5jK4hspcIcn.5b/KdQnJH/LG9FDwIvX6LJ6I1wIOfHa', NULL, NULL, '2026-07-28 11:46:18', NULL, 'fr', 1, '2026-07-28 11:44:37', '2026-07-28 11:46:18', 0);
+(15, 'Gabrielle', 'toure', 'gab@gmail.con', NULL, '$2b$10$SB/hxOq4Pp5jK4hspcIcn.5b/KdQnJH/LG9FDwIvX6LJ6I1wIOfHa', NULL, NULL, '2026-07-31 16:59:13', NULL, 'fr', 1, '2026-07-28 11:44:37', '2026-07-31 14:59:13', 0),
+(16, 'ousmane', 'diarra', 'ous@gmail.com', '45655537', '$2b$10$eoBOKpv0q2Uw98kwKPtRvescE29B60CDOEzdi5dnDCVLu3JOwfDH.', NULL, NULL, '2026-07-31 17:52:40', NULL, 'fr', 1, '2026-07-31 13:32:57', '2026-07-31 15:52:40', 0),
+(17, 'dian', 'sidibe', 'dian@gmail.com', '09876677', '$2b$10$1EQbDs9cJ0WuIOZruRHQVOQNllPYhwn4L4AuATIhcz/5eJ7LCCC/C', NULL, NULL, '2026-08-03 14:09:29', NULL, 'fr', 1, '2026-08-01 19:28:43', '2026-08-03 12:09:29', 0);
 
 -- --------------------------------------------------------
 
@@ -1245,7 +2277,7 @@ CREATE TABLE `warehouse_movements` (
   `id` bigint UNSIGNED NOT NULL,
   `warehouse_id` bigint UNSIGNED NOT NULL,
   `catalog_product_id` bigint UNSIGNED NOT NULL,
-  `movement_type` enum('in_from_supplier','transfer_to_shop','transfer_to_warehouse','adjustment','manual') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `movement_type` enum('in_from_supplier','transfer_to_shop','transfer_to_warehouse','adjustment','manual','transfer_cancel') COLLATE utf8mb4_unicode_ci NOT NULL,
   `quantity` decimal(12,3) NOT NULL COMMENT 'Positif=entrée, Négatif=sortie',
   `stock_before` decimal(12,3) NOT NULL,
   `stock_after` decimal(12,3) NOT NULL,
@@ -1254,21 +2286,22 @@ CREATE TABLE `warehouse_movements` (
   `destination_company_id` bigint UNSIGNED DEFAULT NULL COMMENT 'Si transféré vers une boutique',
   `performed_by` bigint UNSIGNED DEFAULT NULL COMMENT 'Utilisateur ayant fait l''opération',
   `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_cancelled` tinyint(1) DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `warehouse_movements`
 --
 
-INSERT INTO `warehouse_movements` (`id`, `warehouse_id`, `catalog_product_id`, `movement_type`, `quantity`, `stock_before`, `stock_after`, `reference_type`, `reference_id`, `destination_company_id`, `performed_by`, `notes`, `created_at`) VALUES
-(1, 1, 1, 'in_from_supplier', 200.000, 0.000, 200.000, 'manual', NULL, NULL, 5, 'Stock initial', '2026-07-21 14:46:11'),
-(4, 1, 1, 'transfer_to_shop', -20.000, 200.000, 180.000, 'manual', NULL, 4, 5, 'Transfert vers boutique', '2026-07-21 14:54:05'),
-(5, 1, 1, 'in_from_supplier', 100.000, 180.000, 280.000, 'supplier_order', 3, NULL, 5, NULL, '2026-07-21 14:57:34'),
-(6, 1, 2, 'in_from_supplier', 50.000, 0.000, 50.000, 'supplier_order', 4, NULL, 5, NULL, '2026-07-21 14:59:42'),
-(7, 1, 3, 'in_from_supplier', 50.000, 0.000, 50.000, 'supplier_order', 4, NULL, 5, NULL, '2026-07-21 14:59:43'),
-(9, 2, 6, 'in_from_supplier', 300.000, 0.000, 300.000, 'manual', NULL, NULL, 9, 'Stock initial', '2026-07-29 00:20:33'),
-(10, 2, 6, 'adjustment', 100.000, 300.000, 400.000, 'manual', NULL, NULL, 9, '[RETURN]', '2026-07-29 00:51:09');
+INSERT INTO `warehouse_movements` (`id`, `warehouse_id`, `catalog_product_id`, `movement_type`, `quantity`, `stock_before`, `stock_after`, `reference_type`, `reference_id`, `destination_company_id`, `performed_by`, `notes`, `created_at`, `is_cancelled`) VALUES
+(1, 1, 1, 'in_from_supplier', 200.000, 0.000, 200.000, 'manual', NULL, NULL, 5, 'Stock initial', '2026-07-21 14:46:11', 0),
+(4, 1, 1, 'transfer_to_shop', -20.000, 200.000, 180.000, 'manual', NULL, 4, 5, 'Transfert vers boutique', '2026-07-21 14:54:05', 0),
+(5, 1, 1, 'in_from_supplier', 100.000, 180.000, 280.000, 'supplier_order', 3, NULL, 5, NULL, '2026-07-21 14:57:34', 0),
+(6, 1, 2, 'in_from_supplier', 50.000, 0.000, 50.000, 'supplier_order', 4, NULL, 5, NULL, '2026-07-21 14:59:42', 0),
+(7, 1, 3, 'in_from_supplier', 50.000, 0.000, 50.000, 'supplier_order', 4, NULL, 5, NULL, '2026-07-21 14:59:43', 0),
+(9, 2, 6, 'in_from_supplier', 300.000, 0.000, 300.000, 'manual', NULL, NULL, 9, 'Stock initial', '2026-07-29 00:20:33', 0),
+(10, 2, 6, 'adjustment', 100.000, 300.000, 400.000, 'manual', NULL, NULL, 9, '[RETURN]', '2026-07-29 00:51:09', 0);
 
 -- --------------------------------------------------------
 
@@ -1422,6 +2455,12 @@ ALTER TABLE `companies`
   ADD KEY `idx_companies_subscription` (`subscription_plan_id`);
 
 --
+-- Indexes for table `company_subscription_history`
+--
+ALTER TABLE `company_subscription_history`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `debt_payments`
 --
 ALTER TABLE `debt_payments`
@@ -1495,7 +2534,15 @@ ALTER TABLE `memberships`
   ADD UNIQUE KEY `uq_membership_user_company` (`user_id`,`company_id`),
   ADD KEY `idx_memberships_company` (`company_id`),
   ADD KEY `idx_memberships_user` (`user_id`),
-  ADD KEY `idx_memberships_role` (`role`);
+  ADD KEY `idx_memberships_role` (`role`),
+  ADD KEY `memberships_role_id_foreign` (`role_id`);
+
+--
+-- Indexes for table `permissions`
+--
+ALTER TABLE `permissions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `permissions_code_unique` (`code`);
 
 --
 -- Indexes for table `products`
@@ -1550,6 +2597,20 @@ ALTER TABLE `restaurant_tables`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_table_number` (`company_id`,`table_number`),
   ADD KEY `idx_tables_status` (`company_id`,`status`);
+
+--
+-- Indexes for table `roles`
+--
+ALTER TABLE `roles`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `roles_company_id_index` (`company_id`);
+
+--
+-- Indexes for table `role_permissions`
+--
+ALTER TABLE `role_permissions`
+  ADD PRIMARY KEY (`role_id`,`permission_id`),
+  ADD KEY `rp_permission_id_foreign` (`permission_id`);
 
 --
 -- Indexes for table `sales`
@@ -1785,7 +2846,13 @@ ALTER TABLE `client_debts`
 -- AUTO_INCREMENT for table `companies`
 --
 ALTER TABLE `companies`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `company_subscription_history`
+--
+ALTER TABLE `company_subscription_history`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `debt_payments`
@@ -1809,19 +2876,19 @@ ALTER TABLE `expenses`
 -- AUTO_INCREMENT for table `inventory_counts`
 --
 ALTER TABLE `inventory_counts`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `inventory_count_items`
 --
 ALTER TABLE `inventory_count_items`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `inventory_movements`
 --
 ALTER TABLE `inventory_movements`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `measurement_units`
@@ -1833,19 +2900,25 @@ ALTER TABLE `measurement_units`
 -- AUTO_INCREMENT for table `memberships`
 --
 ALTER TABLE `memberships`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+
+--
+-- AUTO_INCREMENT for table `permissions`
+--
+ALTER TABLE `permissions`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `product_catalog`
 --
 ALTER TABLE `product_catalog`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `product_compositions`
@@ -1864,6 +2937,12 @@ ALTER TABLE `product_variants`
 --
 ALTER TABLE `restaurant_tables`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `roles`
+--
+ALTER TABLE `roles`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `sales`
@@ -1947,7 +3026,7 @@ ALTER TABLE `table_sessions`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `user_password_resets`
@@ -2093,7 +3172,8 @@ ALTER TABLE `inventory_movements`
 --
 ALTER TABLE `memberships`
   ADD CONSTRAINT `memberships_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `memberships_ibfk_2` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `memberships_ibfk_2` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `memberships_role_id_foreign` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE RESTRICT;
 
 --
 -- Constraints for table `products`
@@ -2130,6 +3210,19 @@ ALTER TABLE `product_variants`
 --
 ALTER TABLE `restaurant_tables`
   ADD CONSTRAINT `restaurant_tables_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `roles`
+--
+ALTER TABLE `roles`
+  ADD CONSTRAINT `roles_company_id_foreign` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `role_permissions`
+--
+ALTER TABLE `role_permissions`
+  ADD CONSTRAINT `rp_permission_id_foreign` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `rp_role_id_foreign` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `sales`
