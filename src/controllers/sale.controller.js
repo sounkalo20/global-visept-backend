@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const AppError = require("../utils/AppError");
+const debtService = require("../services/debt.service");
 
 // ─── GÉNÉRER UN NUMÉRO DE VENTE UNIQUE ──────────────────
 const generateSaleNumber = async (connection, companyId) => {
@@ -411,6 +412,7 @@ const getSales = async (req, res, next) => {
       sort_by = "created_at",
       sort_order = "DESC",
       search,
+      cash_session_id,
     } = req.query;
 
     // =========================
@@ -430,6 +432,11 @@ const getSales = async (req, res, next) => {
     // =========================
     // FILTERS
     // =========================
+
+    if (cash_session_id) {
+      baseQuery += " AND EXISTS (SELECT 1 FROM sale_payments sp WHERE sp.sale_id = s.id AND sp.cash_session_id = ?)";
+      queryParams.push(cash_session_id);
+    }
 
     if (start_date) {
       baseQuery += " AND DATE(s.sale_date) >= ?";
@@ -693,6 +700,19 @@ const updateSale = async (req, res, next) => {
       throw new AppError("Impossible de modifier une vente annulée.", 400);
     }
 
+    if (sale.payment_status === "debt") {
+      const [payments] = await connection.query(
+        "SELECT COUNT(*) as count FROM debt_payments WHERE client_debt_id = (SELECT id FROM client_debts WHERE sale_id = ?)",
+        [id]
+      );
+      if (parseFloat(sale.amount_paid) > 0 || (payments[0] && payments[0].count > 0)) {
+        throw new AppError(
+          "Impossible de modifier une dette ayant déjà reçu un paiement.",
+          400
+        );
+      }
+    }
+
     // =========================
     // 2. IF ITEMS PROVIDED → FULL REBUILD
     // =========================
@@ -910,6 +930,20 @@ const updateSale = async (req, res, next) => {
           id,
         ],
       );
+
+      // =========================
+      // 2.7 UPDATE DEBT IF EXISTS
+      // =========================
+      if (sale.payment_status === "debt" || payment_status === "debt") {
+        await connection.query(
+          "UPDATE client_debts SET total_amount = ?, remaining_amount = ? WHERE sale_id = ?",
+          [totalAmount, amountDue, id]
+        );
+        const finalClientId = client_id || sale.client_id;
+        if (finalClientId) {
+          await debtService.recalculateClientDebt(connection, finalClientId, companyId);
+        }
+      }
     }
 
     // =========================
@@ -1050,6 +1084,19 @@ const cancelSale = async (req, res, next) => {
       throw new AppError("Cette vente est déjà annulée.", 400);
     }
 
+    if (sale.payment_status === "debt") {
+      const [payments] = await connection.query(
+        "SELECT COUNT(*) as count FROM debt_payments WHERE client_debt_id = (SELECT id FROM client_debts WHERE sale_id = ?)",
+        [id]
+      );
+      if (parseFloat(sale.amount_paid) > 0 || (payments[0] && payments[0].count > 0)) {
+        throw new AppError(
+          "Impossible d'annuler une dette ayant déjà reçu un paiement.",
+          400
+        );
+      }
+    }
+
     // Récupérer les items
     const [saleItems] = await connection.query(
       `SELECT si.*, p.manage_stock, p.current_stock
@@ -1101,7 +1148,13 @@ const cancelSale = async (req, res, next) => {
       [cancel_reason || "Annulation manuelle", id],
     );
 
-    // Mettre à jour la dette du client si existant
+    // Annuler la dette associée dans client_debts
+    await connection.query(
+      'UPDATE client_debts SET status = "canceled", remaining_amount = 0 WHERE sale_id = ?',
+      [id],
+    );
+
+    // Mettre à jour la dette globale du client si existant
     if (sale.client_id && sale.payment_status === "debt") {
       await connection.query(
         "UPDATE clients SET current_debt = GREATEST(current_debt - ?, 0) WHERE id = ?",

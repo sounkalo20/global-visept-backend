@@ -478,7 +478,7 @@ const updateDebt = async (req, res, next) => {
 
     const { id } = req.params;
     const companyId = req.company.id;
-    const { total_amount, due_date, notes, status } = req.body;
+    const { due_date, notes } = req.body;
 
     // Vérifier existence
     const [debts] = await connection.query(
@@ -495,28 +495,6 @@ const updateDebt = async (req, res, next) => {
     const updateFields = [];
     const updateValues = [];
 
-    if (total_amount !== undefined) {
-      const newTotal = parseFloat(total_amount);
-      const totalPaid = parseFloat(
-        (
-          await connection.query(
-            "SELECT COALESCE(SUM(amount), 0) as total FROM debt_payments WHERE client_debt_id = ?",
-            [id],
-          )
-        )[0][0].total,
-      );
-
-      const newRemaining = Math.max(0, newTotal - totalPaid);
-      const newStatus = debtService.calculateDebtStatus(newTotal, newRemaining);
-
-      updateFields.push(
-        "total_amount = ?",
-        "remaining_amount = ?",
-        "status = ?",
-      );
-      updateValues.push(newTotal, newRemaining, newStatus);
-    }
-
     if (due_date !== undefined) {
       updateFields.push("due_date = ?");
       updateValues.push(due_date);
@@ -524,11 +502,6 @@ const updateDebt = async (req, res, next) => {
     if (notes !== undefined) {
       updateFields.push("notes = ?");
       updateValues.push(notes);
-    }
-
-    if (status !== undefined && total_amount === undefined) {
-      updateFields.push("status = ?");
-      updateValues.push(status);
     }
 
     if (updateFields.length > 0) {
