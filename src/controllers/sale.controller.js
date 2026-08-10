@@ -596,7 +596,8 @@ const getSaleById = async (req, res, next) => {
     const [items] = await pool.query(
       `SELECT si.*, p.name as product_name, p.image_url as product_image,
               p.sku as product_sku, p.barcode as product_barcode,
-              u.symbol as unit_symbol, c2.name as category_name
+              u.symbol as unit_symbol, c2.name as category_name,
+              (si.quantity - COALESCE((SELECT SUM(quantity) FROM sale_return_items sri WHERE sri.sale_item_id = si.id), 0)) as remaining_qty
        FROM sale_items si
        JOIN products p ON si.product_id = p.id
        LEFT JOIN measurement_units u ON p.unit_id = u.id
