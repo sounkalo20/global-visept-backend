@@ -10,6 +10,7 @@ const {
   getStockMovements,
   getProductCompositions,      // ← AJOUTÉ
   updateProductCompositions,   // ← AJOUTÉ
+  reactivateProduct,
 } = require("../controllers/product.controller");
 const authenticate = require("../middlewares/auth.middleware");
 const validate = require("../middlewares/validate.middleware");
@@ -119,6 +120,9 @@ router.get("/:id/movements", requireMembership(), getStockMovements);
 
 // DELETE /api/products/:id?company_id=X - Supprimer un produit (owner seulement)
 router.delete("/:id", requireMembership(["owner"]), deleteProduct);
+
+// POST /api/products/:id/reactivate?company_id=X - Réactiver un produit (owner seulement)
+router.post("/:id/reactivate", requireMembership(["owner"]), reactivateProduct);
 
 // GET /api/products/:id/compositions?company_id=X - Obtenir les compositions du plat
 router.get(

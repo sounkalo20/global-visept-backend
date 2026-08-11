@@ -998,116 +998,118 @@ const updateStock = async (req, res, next) => {
   }
 };
 
-// ─── SUPPRIMER UN PRODUIT (AVEC NETTOYAGE ENTREPÔTS) ──
+// ─── DÉSACTIVER UN PRODUIT (SOFT DELETE AVEC GESTION DES STOCKS) ──
 const deleteProduct = async (req, res, next) => {
   const connection = await pool.getConnection();
   try {
     const { id } = req.params;
     const companyId = req.company.id;
+    const { option = 'B', targetWarehouseId } = req.body;
 
     // Vérifier que le produit existe
     const [products] = await connection.query(
-      "SELECT * FROM products WHERE id = ? AND company_id = ? AND deleted_at IS NULL",
-      [id, companyId],
+      "SELECT * FROM products WHERE id = ? AND company_id = ? AND is_active = 1",
+      [id, companyId]
     );
 
     if (products.length === 0) {
-      throw new AppError("Produit introuvable.", 404);
+      throw new AppError("Produit introuvable ou déjà désactivé.", 404);
     }
 
     const product = products[0];
 
-    // 🔥 VÉRIFIER SI LE PRODUIT EST UTILISÉ DANS DES VENTES
-    const [saleItems] = await connection.query(
-      "SELECT id FROM sale_items WHERE product_id = ? LIMIT 1",
-      [id],
-    );
-
-    if (saleItems.length > 0) {
-      throw new AppError(
-        "Impossible de supprimer ce produit car il est lié à des ventes. Désactivez-le plutôt.",
-        400,
-      );
-    }
-
-    // 🔥 VÉRIFIER SI LE PRODUIT EST UTILISÉ DANS DES COMMANDES FOURNISSEURS
-    const [orderItems] = await connection.query(
-      "SELECT id FROM supplier_order_items WHERE product_id = ? LIMIT 1",
-      [id],
-    );
-
-    if (orderItems.length > 0) {
-      throw new AppError(
-        "Impossible de supprimer ce produit car il est lié à des commandes fournisseurs.",
-        400,
-      );
-    }
-
-    // 🔥 VÉRIFIER SI LE PRODUIT EST UTILISÉ COMME INGRÉDIENT
-    const [compositions] = await connection.query(
-      "SELECT id FROM product_compositions WHERE ingredient_id = ? LIMIT 1",
-      [id],
-    );
-
-    if (compositions.length > 0) {
-      throw new AppError(
-        "Impossible de supprimer ce produit car il est utilisé comme ingrédient dans un plat.",
-        400,
-      );
+    // Vérifications bloquantes
+    if (option === 'A') {
+      if (!targetWarehouseId) {
+        throw new AppError("L'entrepôt cible est requis pour l'option A.", 400);
+      }
+      if (product.current_stock <= 0) {
+        throw new AppError("Impossible de choisir l'option A car le produit n'a aucun stock en boutique.", 400);
+      }
     }
 
     await connection.beginTransaction();
 
-    // 🔥 1. SUPPRIMER LES STOCKS DANS TOUS LES ENTREPÔTS
-    if (product.catalog_product_id) {
-      // Supprimer les mouvements d'entrepôt
+    // Traitement selon l'option choisie
+    if (option === 'A' && product.current_stock > 0 && product.manage_stock) {
+      // Décrémenter boutique
       await connection.query(
-        "DELETE FROM warehouse_movements WHERE catalog_product_id = ?",
-        [product.catalog_product_id]
+        "UPDATE products SET current_stock = 0 WHERE id = ?",
+        [id]
       );
-
-      // Supprimer les stocks d'entrepôt
+      
+      // Tracer sortie boutique
       await connection.query(
-        "DELETE FROM warehouse_stocks WHERE catalog_product_id = ?",
-        [product.catalog_product_id]
+        `INSERT INTO inventory_movements 
+         (company_id, product_id, movement_type, quantity, stock_before, stock_after, note, performed_by) 
+         VALUES (?, ?, 'transfer_out', ?, ?, 0, 'Transfert de désactivation', ?)`,
+        [companyId, id, -product.current_stock, product.current_stock, req.user ? req.user.id : null]
       );
 
-      // 🔥 VÉRIFIER SI D'AUTRES PRODUITS UTILISENT CE CATALOG_PRODUCT_ID
-      const [otherProducts] = await connection.query(
-        "SELECT id FROM products WHERE catalog_product_id = ? AND id != ? AND deleted_at IS NULL",
-        [product.catalog_product_id, id]
-      );
+      // Incrémenter entrepôt
+      if (product.catalog_product_id) {
+        const [warehouseStocks] = await connection.query(
+          "SELECT quantity FROM warehouse_stocks WHERE warehouse_id = ? AND catalog_product_id = ?",
+          [targetWarehouseId, product.catalog_product_id]
+        );
 
-      // Si aucun autre produit n'utilise ce catalogue, on le supprime aussi
-      if (otherProducts.length === 0) {
+        let stockBefore = 0;
+        let stockAfter = product.current_stock;
+
+        if (warehouseStocks.length > 0) {
+          stockBefore = parseFloat(warehouseStocks[0].quantity);
+          stockAfter = stockBefore + parseFloat(product.current_stock);
+          await connection.query(
+            "UPDATE warehouse_stocks SET quantity = quantity + ? WHERE warehouse_id = ? AND catalog_product_id = ?",
+            [product.current_stock, targetWarehouseId, product.catalog_product_id]
+          );
+        } else {
+          await connection.query(
+            "INSERT INTO warehouse_stocks (warehouse_id, catalog_product_id, quantity) VALUES (?, ?, ?)",
+            [targetWarehouseId, product.catalog_product_id, product.current_stock]
+          );
+        }
+
+        // Tracer entrée entrepôt
         await connection.query(
-          "DELETE FROM product_catalog WHERE id = ?",
+          `INSERT INTO warehouse_movements 
+           (warehouse_id, catalog_product_id, movement_type, quantity, stock_before, stock_after, notes, performed_by) 
+           VALUES (?, ?, 'adjustment', ?, ?, ?, 'Transfert suite à désactivation boutique', ?)`,
+          [targetWarehouseId, product.catalog_product_id, product.current_stock, stockBefore, stockAfter, req.user ? req.user.id : null]
+        );
+      }
+    } 
+    else if (option === 'C') {
+      if (product.catalog_product_id) {
+        // Remise à zéro dans tous les entrepôts
+        const [allWarehouseStocks] = await connection.query(
+          "SELECT warehouse_id, quantity FROM warehouse_stocks WHERE catalog_product_id = ? AND quantity > 0",
           [product.catalog_product_id]
         );
+
+        for (const stock of allWarehouseStocks) {
+          const stockQty = parseFloat(stock.quantity);
+          
+          // Mettre à zéro
+          await connection.query(
+            "UPDATE warehouse_stocks SET quantity = 0 WHERE warehouse_id = ? AND catalog_product_id = ?",
+            [stock.warehouse_id, product.catalog_product_id]
+          );
+
+          // Tracer
+          await connection.query(
+            `INSERT INTO warehouse_movements 
+             (warehouse_id, catalog_product_id, movement_type, quantity, stock_before, stock_after, notes, performed_by) 
+             VALUES (?, ?, 'adjustment', ?, ?, 0, 'Suppression', ?)`,
+            [stock.warehouse_id, product.catalog_product_id, -stockQty, stockQty, req.user ? req.user.id : null]
+          );
+        }
       }
     }
 
-    // 🔥 2. SUPPRIMER LES COMPOSITIONS (si le produit est un plat)
+    // SOFT DELETE DU PRODUIT (is_active = 0)
     await connection.query(
-      "DELETE FROM product_compositions WHERE parent_product_id = ? OR ingredient_id = ?",
-      [id, id]
-    );
-
-    // 🔥 3. SUPPRIMER LES VARIANTES
-    await connection.query(
-      "DELETE FROM product_variants WHERE product_id = ?",
-      [id]
-    );
-
-    // 🔥 4. SUPPRIMER LES MOUVEMENTS DE STOCK
-    await connection.query(
-      "DELETE FROM inventory_movements WHERE product_id = ?",
-      [id]
-    );
-
-    // 🔥 5. SOFT DELETE DU PRODUIT
-    await connection.query(
-      "UPDATE products SET deleted_at = NOW() WHERE id = ? AND company_id = ?",
+      "UPDATE products SET is_active = 0 WHERE id = ? AND company_id = ?",
       [id, companyId]
     );
 
@@ -1115,10 +1117,10 @@ const deleteProduct = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Produit supprimé avec succès. Toutes les données associées ont été nettoyées.',
+      message: 'Produit désactivé avec succès.',
       data: {
-        deleted_product_id: id,
-        catalog_cleaned: product.catalog_product_id ? true : false,
+        product_id: id,
+        option_applied: option
       },
     });
   } catch (error) {
@@ -1334,6 +1336,46 @@ const updateProductCompositions = async (req, res, next) => {
 };
 
 
+// ─── RÉACTIVER UN PRODUIT ──────────────────────────────────
+const reactivateProduct = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  try {
+    const { id } = req.params;
+    const companyId = req.company.id;
+
+    // Vérifier que le produit existe
+    const [products] = await connection.query(
+      "SELECT id, is_active FROM products WHERE id = ? AND company_id = ?",
+      [id, companyId]
+    );
+
+    if (products.length === 0) {
+      throw new AppError("Produit introuvable.", 404);
+    }
+
+    if (products[0].is_active === 1) {
+      return res.status(200).json({
+        success: true,
+        message: 'Ce produit est déjà actif.'
+      });
+    }
+
+    await connection.query(
+      "UPDATE products SET is_active = 1 WHERE id = ? AND company_id = ?",
+      [id, companyId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Produit réactivé avec succès.'
+    });
+  } catch (error) {
+    next(error);
+  } finally {
+    connection.release();
+  }
+};
+
 module.exports = {
   createProduct,
   getProducts,
@@ -1344,4 +1386,5 @@ module.exports = {
   getStockMovements,
   getProductCompositions,
   updateProductCompositions,
+  reactivateProduct,
 };
