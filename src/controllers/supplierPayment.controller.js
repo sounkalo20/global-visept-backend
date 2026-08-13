@@ -147,6 +147,11 @@ const addPayment = async (req, res, next) => {
       throw new AppError("L'ID du fournisseur est requis.", 400);
     }
 
+    const paymentAmount = parseFloat(amount);
+    if (isNaN(paymentAmount) || paymentAmount <= 0) {
+      throw new AppError("Le montant du paiement doit être supérieur à 0 FCFA.", 400);
+    }
+
     // Vérifier que le fournisseur existe et est actif
     const [suppliers] = await connection.query(
       'SELECT id, company_name, is_active FROM suppliers WHERE id = ? AND company_id = ? AND deleted_at IS NULL',
@@ -172,10 +177,10 @@ const addPayment = async (req, res, next) => {
       [
         companyId,
         supplier_id,
-        amount,
-        payment_method,
+        paymentAmount,
+        payment_method || 'cash',
         payment_reference || null,
-        payment_date,
+        payment_date || new Date().toISOString().split('T')[0],
         req.user.id,
         note || null,
       ]
@@ -240,8 +245,12 @@ const updatePayment = async (req, res, next) => {
     const values = [];
 
     if (amount !== undefined) {
+      const paymentAmount = parseFloat(amount);
+      if (isNaN(paymentAmount) || paymentAmount <= 0) {
+        throw new AppError("Le montant du paiement doit être supérieur à 0 FCFA.", 400);
+      }
       updates.push('amount = ?');
-      values.push(amount);
+      values.push(paymentAmount);
     }
     if (payment_method !== undefined) {
       updates.push('payment_method = ?');

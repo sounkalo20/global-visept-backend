@@ -25,6 +25,9 @@ const createPayment = async (req, res, next) => {
     }
 
     const paymentAmount = parseFloat(amount);
+    if (isNaN(paymentAmount) || paymentAmount <= 0) {
+      throw new AppError("Le montant du paiement doit être supérieur à 0 FCFA.", 400);
+    }
     if (paymentAmount > parseFloat(debt.remaining_amount)) {
       throw new AppError(`Le montant dépasse le reste à payer (${parseFloat(debt.remaining_amount).toLocaleString()} FCFA).`, 400);
     }
@@ -146,7 +149,14 @@ const updatePayment = async (req, res, next) => {
     const updateFields = [];
     const updateValues = [];
 
-    if (amount !== undefined) { updateFields.push('amount = ?'); updateValues.push(amount); }
+    if (amount !== undefined) {
+      const paymentAmount = parseFloat(amount);
+      if (isNaN(paymentAmount) || paymentAmount <= 0) {
+        throw new AppError("Le montant du paiement doit être supérieur à 0 FCFA.", 400);
+      }
+      updateFields.push('amount = ?');
+      updateValues.push(paymentAmount);
+    }
     if (payment_method !== undefined) { updateFields.push('payment_method = ?'); updateValues.push(payment_method); }
     if (payment_reference !== undefined) { updateFields.push('payment_reference = ?'); updateValues.push(payment_reference); }
     if (payment_date !== undefined) { updateFields.push('payment_date = ?'); updateValues.push(payment_date); }

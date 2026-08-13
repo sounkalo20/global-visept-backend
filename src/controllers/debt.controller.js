@@ -91,8 +91,14 @@ const createDebt = async (req, res, next) => {
         );
       }
 
-      const unitPrice = parseFloat(item.unit_price || product.retail_price);
       const quantity = parseFloat(item.quantity);
+      if (isNaN(quantity) || quantity <= 0) {
+        throw new AppError("La quantité de chaque article doit être supérieure à 0.", 400);
+      }
+      const unitPrice = parseFloat(item.unit_price !== undefined ? item.unit_price : product.retail_price);
+      if (isNaN(unitPrice) || unitPrice < 0) {
+        throw new AppError("Le prix unitaire ne peut pas être négatif.", 400);
+      }
       const totalPrice = unitPrice * quantity;
       subtotal += totalPrice;
 
@@ -108,12 +114,24 @@ const createDebt = async (req, res, next) => {
     // ═══════════════════════════════════════════════
     let discountAmount = 0;
     if (discount_type === "percentage") {
-      discountAmount = subtotal * (parseFloat(discount_value) / 100);
+      const discVal = parseFloat(discount_value);
+      if (isNaN(discVal) || discVal < 0 || discVal > 100) {
+        throw new AppError("Le pourcentage de remise doit être compris entre 0 et 100%.", 400);
+      }
+      discountAmount = subtotal * (discVal / 100);
     } else if (discount_type === "fixed") {
-      discountAmount = parseFloat(discount_value);
+      const discVal = parseFloat(discount_value);
+      if (isNaN(discVal) || discVal < 0) {
+        throw new AppError("Le montant de la remise fixe ne peut pas être négatif.", 400);
+      }
+      discountAmount = discVal;
     }
 
     const totalAmount = subtotal - discountAmount;
+    if (isNaN(totalAmount) || totalAmount <= 0) {
+      throw new AppError("Impossible d'enregistrer cette dette. Le montant total doit être supérieur à 0 FCFA. Vérifiez les prix et remises des produits.", 400);
+    }
+
     const amountPaid = parseFloat(amount_paid || 0);
     const amountDue = totalAmount - amountPaid;
 
@@ -497,6 +515,9 @@ const updateDebt = async (req, res, next) => {
 
     if (total_amount !== undefined) {
       const newTotal = parseFloat(total_amount);
+      if (isNaN(newTotal) || newTotal <= 0) {
+        throw new AppError("Le montant total de la dette doit être supérieur à 0 FCFA.", 400);
+      }
       const totalPaid = parseFloat(
         (
           await connection.query(

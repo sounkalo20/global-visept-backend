@@ -45,6 +45,10 @@ const createReturn = async (req, res, next) => {
     }
     const sale = sales[0];
 
+    if (!items || items.length === 0) {
+      throw new AppError("Au moins un article est requis pour effectuer un retour.", 400);
+    }
+
     // 2. Parcourir les items et valider les quantités
     let totalAmountReturned = 0;
     const returnItemsData = [];
@@ -65,6 +69,9 @@ const createReturn = async (req, res, next) => {
 
       const saleItem = saleItems[0];
       const quantityToReturn = Number(item.quantity);
+      if (isNaN(quantityToReturn) || quantityToReturn <= 0) {
+        throw new AppError("La quantité à retourner doit être supérieure à 0.", 400);
+      }
 
       // Vérifier combien a déjà été retourné pour ce sale_item pour éviter de retourner plus que vendu
       const [existingReturns] = await connection.query(
@@ -80,13 +87,7 @@ const createReturn = async (req, res, next) => {
       }
 
       const unitPrice = Number(saleItem.unit_price);
-      // Prorata du discount : on ignore ici pour simplifier, ou on pourrait le déduire. 
-      // On prend juste unit_price * qty
       let itemTotalPrice = unitPrice * quantityToReturn;
-
-      // S'il y a un discount au niveau item, on pourrait le proratiser, mais unit_price est le prix appliqué avant discount global.
-      // Par simplicité, on utilise l'unit_price facturé pour calculer le montant remboursé.
-      // Si la vente avait un discount global, on ne le récupère pas forcément ici.
 
       totalAmountReturned += itemTotalPrice;
 
@@ -95,9 +96,13 @@ const createReturn = async (req, res, next) => {
         quantity: quantityToReturn,
         unitPrice,
         totalPrice: itemTotalPrice,
-        returnType: item.return_type, // 'reintegrable' ou 'defective'
+        returnType: item.return_type || 'reintegrable',
         reason: item.reason || null
       });
+    }
+
+    if (isNaN(totalAmountReturned) || totalAmountReturned <= 0) {
+      throw new AppError("Le montant total du retour doit être supérieur à 0 FCFA.", 400);
     }
 
     // 3. Créer le sale_return

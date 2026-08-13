@@ -92,11 +92,17 @@ const createSale = async (req, res, next) => {
       }
 
       const quantity = Number(item.quantity);
+      if (isNaN(quantity) || quantity <= 0) {
+        throw new AppError("La quantité de chaque article doit être supérieure à 0.", 400);
+      }
 
       // ===============================
       // 💰 PRICE TYPE LOGIC
       // ===============================
       let unitPrice = Number(item.unit_price);
+      if (isNaN(unitPrice) || unitPrice < 0) {
+        throw new AppError("Le prix unitaire ne peut pas être négatif.", 400);
+      }
       let priceType = "custom";
 
       const retailPrice = Number(product.retail_price);
@@ -127,6 +133,9 @@ const createSale = async (req, res, next) => {
       }
 
       const discountAmount = Number(item.discount_amount || 0);
+      if (isNaN(discountAmount) || discountAmount < 0 || discountAmount > (unitPrice * quantity)) {
+        throw new AppError("La remise d'un article ne peut pas être négative ni dépasser le montant de la ligne.", 400);
+      }
       const totalPrice = unitPrice * quantity - discountAmount;
 
       subtotal += totalPrice;
@@ -148,12 +157,28 @@ const createSale = async (req, res, next) => {
     let globalDiscount = 0;
 
     if (discount_type === "percentage" && discount_value) {
-      globalDiscount = subtotal * (Number(discount_value) / 100);
+      const discVal = Number(discount_value);
+      if (isNaN(discVal) || discVal < 0 || discVal > 100) {
+        throw new AppError("Le pourcentage de remise doit être compris entre 0 et 100%.", 400);
+      }
+      globalDiscount = subtotal * (discVal / 100);
     } else if (discount_type === "fixed" && discount_value) {
-      globalDiscount = Number(discount_value);
+      const discVal = Number(discount_value);
+      if (isNaN(discVal) || discVal < 0) {
+        throw new AppError("Le montant de la remise fixe ne peut pas être négatif.", 400);
+      }
+      globalDiscount = discVal;
     }
 
     const totalAmount = subtotal - globalDiscount;
+    const roundedTotal = Math.round(totalAmount * 100) / 100;
+
+    if (isNaN(totalAmount) || roundedTotal <= 0) {
+      throw new AppError(
+        "Impossible d'enregistrer cette vente. Le montant total doit être supérieur à 0 FCFA. Vérifiez les prix et remises des produits.",
+        400
+      );
+    }
 
     // ===============================
     // 🚨 PAYMENT VALIDATION - MEILLEURE VERSION
@@ -161,10 +186,9 @@ const createSale = async (req, res, next) => {
     // Cela permet les trop-perçus (monnaie) tout en interdisant les dettes
     // ===============================
     const paid = Number(amount_paid);
-    const roundedTotal = Math.round(totalAmount * 100) / 100;
     const roundedPaid = Math.round(paid * 100) / 100;
 
-    if (!amount_paid || roundedPaid < roundedTotal) {
+    if (isNaN(roundedPaid) || roundedPaid < roundedTotal) {
       throw new AppError(
         `Le montant payé (${roundedPaid} FCFA) est insuffisant. Le total de la vente est de ${roundedTotal} FCFA.`,
         400
@@ -677,7 +701,12 @@ const updateSale = async (req, res, next) => {
           );
         }
 
-        if (product.manage_stock && product.current_stock < item.quantity) {
+        const qty = parseFloat(item.quantity);
+        if (isNaN(qty) || qty <= 0) {
+          throw new AppError("La quantité de chaque article doit être supérieure à 0.", 400);
+        }
+
+        if (product.manage_stock && product.current_stock < qty) {
           throw new AppError(
             `Stock insuffisant pour "${product.name}". Disponible: ${product.current_stock}`,
             400,
@@ -688,6 +717,9 @@ const updateSale = async (req, res, next) => {
         // PRICE TYPE LOGIC FIX
         // =========================
         const unit = parseFloat(item.unit_price);
+        if (isNaN(unit) || unit < 0) {
+          throw new AppError("Le prix unitaire ne peut pas être négatif.", 400);
+        }
         const retail = parseFloat(product.retail_price);
         const wholesale = parseFloat(product.wholesale_price);
 
@@ -700,8 +732,11 @@ const updateSale = async (req, res, next) => {
         }
 
         const discountAmount = parseFloat(item.discount_amount || 0);
+        if (isNaN(discountAmount) || discountAmount < 0 || discountAmount > (unit * qty)) {
+          throw new AppError("La remise d'un article ne peut pas être négative ni dépasser le montant de la ligne.", 400);
+        }
 
-        const totalPrice = unit * item.quantity - discountAmount;
+        const totalPrice = unit * qty - discountAmount;
 
         subtotal += totalPrice;
 
@@ -720,7 +755,7 @@ const updateSale = async (req, res, next) => {
             id,
             item.product_id,
             item.variant_id || null,
-            item.quantity,
+            qty,
             priceType,
             unit,
             product.retail_price,
@@ -738,7 +773,7 @@ const updateSale = async (req, res, next) => {
         if (product.manage_stock) {
           const stockBefore = parseFloat(product.current_stock);
 
-          const stockAfter = Math.max(0, stockBefore - item.quantity);
+          const stockAfter = Math.max(0, stockBefore - qty);
 
           await connection.query(
             "UPDATE products SET current_stock = ? WHERE id = ?",
@@ -754,7 +789,7 @@ const updateSale = async (req, res, next) => {
             [
               companyId,
               item.product_id,
-              -item.quantity,
+              -qty,
               stockBefore,
               stockAfter,
               id,
@@ -771,17 +806,33 @@ const updateSale = async (req, res, next) => {
       let discountAmount = 0;
 
       if (discount_type === "percentage" && discount_value) {
-        discountAmount = subtotal * (parseFloat(discount_value) / 100);
+        const discVal = parseFloat(discount_value);
+        if (isNaN(discVal) || discVal < 0 || discVal > 100) {
+          throw new AppError("Le pourcentage de remise doit être compris entre 0 et 100%.", 400);
+        }
+        discountAmount = subtotal * (discVal / 100);
       } else if (discount_type === "fixed" && discount_value) {
-        discountAmount = parseFloat(discount_value);
+        const discVal = parseFloat(discount_value);
+        if (isNaN(discVal) || discVal < 0) {
+          throw new AppError("Le montant de la remise fixe ne peut pas être négatif.", 400);
+        }
+        discountAmount = discVal;
       }
 
       const totalAmount = subtotal - discountAmount;
+      const roundedTotal = Math.round(totalAmount * 100) / 100;
+
+      if (isNaN(totalAmount) || roundedTotal <= 0) {
+        throw new AppError(
+          "Impossible d'enregistrer cette vente. Le montant total doit être supérieur à 0 FCFA. Vérifiez les prix et remises des produits.",
+          400
+        );
+      }
 
       const finalAmountPaid =
-        payment_status === "paid" ? totalAmount : parseFloat(amount_paid) || 0;
+        payment_status === "paid" ? roundedTotal : parseFloat(amount_paid) || 0;
 
-      const amountDue = totalAmount - finalAmountPaid;
+      const amountDue = roundedTotal - finalAmountPaid;
 
       // =========================
       // 2.6 UPDATE SALE

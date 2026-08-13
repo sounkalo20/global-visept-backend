@@ -147,14 +147,36 @@ const createOrder = async (req, res, next) => {
             throw new AppError('Un ou plusieurs produits sont introuvables.', 404);
         }
 
+        if (!items || items.length === 0) {
+            throw new AppError("Au moins un article est requis pour la commande fournisseur.", 400);
+        }
+
+        for (const item of items) {
+            const qty = parseFloat(item.quantity_ordered);
+            if (isNaN(qty) || qty <= 0) {
+                throw new AppError("La quantité commandée doit être supérieure à 0 pour chaque article.", 400);
+            }
+            const unitCost = parseFloat(item.unit_cost);
+            if (isNaN(unitCost) || unitCost < 0) {
+                throw new AppError("Le coût unitaire ne peut pas être négatif.", 400);
+            }
+        }
+
         // Générer le numéro de commande
         const orderNumber = await generateOrderNumber(connection, companyId);
 
         await connection.beginTransaction();
 
         // Calculer le subtotal
-        const subtotal = items.reduce((sum, item) => sum + (item.quantity_ordered * item.unit_cost), 0);
-        const totalAmount = subtotal + parseFloat(shipping_cost) + parseFloat(tax_amount);
+        const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.quantity_ordered) * parseFloat(item.unit_cost)), 0);
+        const totalAmount = subtotal + parseFloat(shipping_cost || 0) + parseFloat(tax_amount || 0);
+
+        if (isNaN(totalAmount) || totalAmount <= 0) {
+            throw new AppError(
+                "Impossible d'enregistrer cette commande fournisseur. Le montant total doit être supérieur à 0 FCFA. Vérifiez les coûts des articles.",
+                400
+            );
+        }
 
         // Insérer la commande
         const [orderResult] = await connection.query(
@@ -838,6 +860,10 @@ const addPayment = async (req, res, next) => {
         const { id } = req.params; // Peut être l'ID d'une commande ou 'global'
         const companyId = req.company.id;
         const { amount, payment_method, payment_reference, payment_date, note, supplier_id } = req.body;
+        const paymentAmount = parseFloat(amount);
+        if (isNaN(paymentAmount) || paymentAmount <= 0) {
+            throw new AppError("Le montant du paiement doit être supérieur à 0 FCFA.", 400);
+        }
 
         // Deux cas :
         // 1. Paiement lié à une commande : id est l'order_id, supplier_id récupéré de la commande

@@ -83,7 +83,13 @@ const createSale = async (req, res, next) => {
             }
 
             const quantity = Number(item.quantity);
+            if (isNaN(quantity) || quantity <= 0) {
+                throw new AppError("La quantité de chaque plat doit être supérieure à 0.", 400);
+            }
             let unitPrice = Number(item.unit_price);
+            if (isNaN(unitPrice) || unitPrice < 0) {
+                throw new AppError("Le prix unitaire ne peut pas être négatif.", 400);
+            }
             let priceType = 'custom';
 
             if (unitPrice === Number(product.retail_price)) {
@@ -97,6 +103,9 @@ const createSale = async (req, res, next) => {
             if (item.price_type === 'custom') priceType = 'custom';
 
             const discountAmount = Number(item.discount_amount || 0);
+            if (isNaN(discountAmount) || discountAmount < 0 || discountAmount > (unitPrice * quantity)) {
+                throw new AppError("La remise d'un plat ne peut pas être négative ni dépasser le montant de la ligne.", 400);
+            }
             const totalPrice = unitPrice * quantity - discountAmount;
 
             subtotal += totalPrice;
@@ -115,15 +124,30 @@ const createSale = async (req, res, next) => {
         // Remise globale
         let globalDiscount = 0;
         if (discount_type === 'percentage' && discount_value) {
-            globalDiscount = subtotal * (Number(discount_value) / 100);
+            const discVal = Number(discount_value);
+            if (isNaN(discVal) || discVal < 0 || discVal > 100) {
+                throw new AppError("Le pourcentage de remise doit être compris entre 0 et 100%.", 400);
+            }
+            globalDiscount = subtotal * (discVal / 100);
         } else if (discount_type === 'fixed' && discount_value) {
-            globalDiscount = Number(discount_value);
+            const discVal = Number(discount_value);
+            if (isNaN(discVal) || discVal < 0) {
+                throw new AppError("Le montant de la remise fixe ne peut pas être négatif.", 400);
+            }
+            globalDiscount = discVal;
         }
 
         const totalAmount = Math.round((subtotal - globalDiscount) * 100) / 100;
+        if (isNaN(totalAmount) || totalAmount <= 0) {
+            throw new AppError(
+                "Impossible d'enregistrer cette commande. Le montant total doit être supérieur à 0 FCFA. Vérifiez les prix des plats.",
+                400
+            );
+        }
+
         const paid = Math.round(Number(amount_paid) * 100) / 100;
 
-        if (!amount_paid || paid < totalAmount) {
+        if (isNaN(paid) || paid < totalAmount) {
             throw new AppError(
                 `Le montant payé (${paid.toLocaleString()} FCFA) est insuffisant. Total : ${totalAmount.toLocaleString()} FCFA.`,
                 400
@@ -395,13 +419,24 @@ const updateSale = async (req, res, next) => {
                     throw new AppError(`Le plat "${product.name}" n'appartient pas à ce restaurant.`, 403);
                 }
 
+                const qty = parseFloat(item.quantity);
+                if (isNaN(qty) || qty <= 0) {
+                    throw new AppError("La quantité de chaque plat doit être supérieure à 0.", 400);
+                }
+
                 const unit = parseFloat(item.unit_price);
+                if (isNaN(unit) || unit < 0) {
+                    throw new AppError("Le prix unitaire ne peut pas être négatif.", 400);
+                }
                 let priceType = 'custom';
                 if (unit === parseFloat(product.retail_price)) priceType = 'retail';
                 if (unit === parseFloat(product.wholesale_price)) priceType = 'wholesale';
 
                 const discountAmount = parseFloat(item.discount_amount || 0);
-                const totalPrice = unit * item.quantity - discountAmount;
+                if (isNaN(discountAmount) || discountAmount < 0 || discountAmount > (unit * qty)) {
+                    throw new AppError("La remise d'un plat ne peut pas être négative ni dépasser le montant de la ligne.", 400);
+                }
+                const totalPrice = unit * qty - discountAmount;
                 subtotal += totalPrice;
 
                 await connection.query(
@@ -411,7 +446,7 @@ const updateSale = async (req, res, next) => {
             discount_amount, cost_price, notes
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
-                        id, item.product_id, item.quantity, priceType, unit,
+                        id, item.product_id, qty, priceType, unit,
                         product.retail_price, product.wholesale_price, totalPrice,
                         discountAmount, product.cost_price, item.notes || null,
                     ]
@@ -420,12 +455,26 @@ const updateSale = async (req, res, next) => {
 
             let discountAmount = 0;
             if (discount_type === 'percentage' && discount_value) {
-                discountAmount = subtotal * (parseFloat(discount_value) / 100);
+                const discVal = parseFloat(discount_value);
+                if (isNaN(discVal) || discVal < 0 || discVal > 100) {
+                    throw new AppError("Le pourcentage de remise doit être compris entre 0 et 100%.", 400);
+                }
+                discountAmount = subtotal * (discVal / 100);
             } else if (discount_type === 'fixed' && discount_value) {
-                discountAmount = parseFloat(discount_value);
+                const discVal = parseFloat(discount_value);
+                if (isNaN(discVal) || discVal < 0) {
+                    throw new AppError("Le montant de la remise fixe ne peut pas être négatif.", 400);
+                }
+                discountAmount = discVal;
             }
 
-            const totalAmount = subtotal - discountAmount;
+            const totalAmount = Math.round((subtotal - discountAmount) * 100) / 100;
+            if (isNaN(totalAmount) || totalAmount <= 0) {
+                throw new AppError(
+                    "Impossible d'enregistrer cette commande. Le montant total doit être supérieur à 0 FCFA. Vérifiez les prix des plats.",
+                    400
+                );
+            }
             const finalAmountPaid = payment_status === 'paid' ? totalAmount : parseFloat(amount_paid) || 0;
             const amountDue = totalAmount - finalAmountPaid;
 

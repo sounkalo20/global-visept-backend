@@ -37,6 +37,11 @@ const createExpense = async (req, res, next) => {
     const companyId = req.company.id;
     const userId = req.user.id;
 
+    const expenseAmount = parseFloat(amount);
+    if (isNaN(expenseAmount) || expenseAmount <= 0) {
+      throw new AppError("Le montant de la dépense doit être supérieur à 0 FCFA.", 400);
+    }
+
     // Insérer la dépense
     const [result] = await pool.query(
       `INSERT INTO expenses (
@@ -48,11 +53,11 @@ const createExpense = async (req, res, next) => {
         title,
         description || null,
         category,
-        amount,
+        expenseAmount,
         currency || "XOF",
         payment_method,
         payment_reference || null,
-        expense_date,
+        expense_date || new Date().toISOString().split('T')[0],
         userId,
       ],
     );
@@ -263,8 +268,12 @@ const updateExpense = async (req, res, next) => {
       updateValues.push(category);
     }
     if (amount !== undefined) {
+      const expenseAmount = parseFloat(amount);
+      if (isNaN(expenseAmount) || expenseAmount <= 0) {
+        throw new AppError("Le montant de la dépense doit être supérieur à 0 FCFA.", 400);
+      }
       updateFields.push("amount = ?");
-      updateValues.push(amount);
+      updateValues.push(expenseAmount);
     }
     if (currency !== undefined) {
       updateFields.push("currency = ?");
