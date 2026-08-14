@@ -8,6 +8,7 @@ const {
   updateClient,
   deleteClient,
   getClientStats,
+  bulkClientAction,
 } = require("../controllers/client.controller");
 const authenticate = require("../middlewares/auth.middleware");
 const validate = require("../middlewares/validate.middleware");
@@ -16,10 +17,20 @@ const { requirePermission } = require("../middlewares/permission.middleware");
 const {
   createClientSchema,
   updateClientSchema,
+  bulkClientSchema,
 } = require("../validators/client.validator");
 
 // Toutes les routes nécessitent une authentification
 router.use(authenticate);
+
+// POST /api/clients/bulk - Actions en masse sur les clients
+router.post(
+  "/bulk",
+  requireMembership(),
+  requirePermission('clients.edit'),
+  validate(bulkClientSchema),
+  bulkClientAction
+);
 
 // GET /api/clients/stats?company_id=X - Statistiques
 router.get("/stats", requireMembership(), requirePermission('clients.view'), getClientStats);

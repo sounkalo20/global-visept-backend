@@ -1334,6 +1334,221 @@ const updateProductCompositions = async (req, res, next) => {
 };
 
 
+// ─── ACTIONS EN MASSE (BULK ACTIONS) ──────────────────
+const bulkProductAction = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  try {
+    const companyId = req.company.id;
+    const { ids, action, params = {} } = req.body;
+
+    if (!ids || ids.length === 0) {
+      throw new AppError('Aucun produit sélectionné.', 400);
+    }
+
+    // 1. Récupérer les produits existants appartenant à l'entreprise
+    const [products] = await connection.query(
+      `SELECT id, name, is_active, category_id, manage_stock, catalog_product_id 
+       FROM products 
+       WHERE id IN (?) AND company_id = ? AND deleted_at IS NULL`,
+      [ids, companyId]
+    );
+
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const results = [];
+    let successCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    await connection.beginTransaction();
+
+    if (action === 'activate') {
+      for (const id of ids) {
+        const prod = productMap.get(id);
+        if (!prod) {
+          results.push({ id, status: 'failed', reason: 'Produit introuvable ou non autorisé.' });
+          failedCount++;
+        } else if (prod.is_active === 1) {
+          results.push({ id, name: prod.name, status: 'skipped', reason: 'Le produit est déjà actif.' });
+          skippedCount++;
+        } else {
+          await connection.query('UPDATE products SET is_active = 1 WHERE id = ?', [id]);
+          results.push({ id, name: prod.name, status: 'success', message: 'Produit activé.' });
+          successCount++;
+        }
+      }
+    } else if (action === 'deactivate') {
+      for (const id of ids) {
+        const prod = productMap.get(id);
+        if (!prod) {
+          results.push({ id, status: 'failed', reason: 'Produit introuvable ou non autorisé.' });
+          failedCount++;
+        } else if (prod.is_active === 0) {
+          results.push({ id, name: prod.name, status: 'skipped', reason: 'Le produit est déjà inactif.' });
+          skippedCount++;
+        } else {
+          await connection.query('UPDATE products SET is_active = 0 WHERE id = ?', [id]);
+          results.push({ id, name: prod.name, status: 'success', message: 'Produit désactivé.' });
+          successCount++;
+        }
+      }
+    } else if (action === 'change_category') {
+      let targetCategoryName = 'Non catégorisé';
+      const targetCatId = params.category_id || null;
+
+      if (targetCatId) {
+        const [ownerRows] = await connection.query(
+          "SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1",
+          [companyId]
+        );
+        const owner_id = ownerRows.length > 0 ? ownerRows[0].user_id : null;
+
+        const [cat] = await connection.query(
+          `SELECT id, name FROM categories 
+           WHERE id = ? 
+             AND (owner_id = ? OR owner_id IN (SELECT user_id FROM memberships WHERE company_id = ?) OR owner_id IS NULL) 
+             AND deleted_at IS NULL`,
+          [targetCatId, owner_id, companyId]
+        );
+        if (cat.length === 0) {
+          throw new AppError('La catégorie spécifiée est introuvable.', 404);
+        }
+        targetCategoryName = cat[0].name;
+      }
+
+      for (const id of ids) {
+        const prod = productMap.get(id);
+        if (!prod) {
+          results.push({ id, status: 'failed', reason: 'Produit introuvable ou non autorisé.' });
+          failedCount++;
+        } else {
+          await connection.query('UPDATE products SET category_id = ? WHERE id = ?', [
+            targetCatId,
+            id,
+          ]);
+          if (prod.catalog_product_id) {
+            await connection.query('UPDATE product_catalog SET category_id = ? WHERE id = ?', [
+              targetCatId,
+              prod.catalog_product_id,
+            ]);
+          }
+          results.push({
+            id,
+            name: prod.name,
+            status: 'success',
+            message: `Catégorie changée vers "${targetCategoryName}".`,
+          });
+          successCount++;
+        }
+      }
+    } else if (action === 'toggle_stock_management') {
+      const manageStockVal = params.manage_stock ? 1 : 0;
+      for (const id of ids) {
+        const prod = productMap.get(id);
+        if (!prod) {
+          results.push({ id, status: 'failed', reason: 'Produit introuvable ou non autorisé.' });
+          failedCount++;
+        } else {
+          await connection.query('UPDATE products SET manage_stock = ? WHERE id = ?', [
+            manageStockVal,
+            id,
+          ]);
+          results.push({
+            id,
+            name: prod.name,
+            status: 'success',
+            message: manageStockVal ? 'Gestion de stock activée.' : 'Gestion de stock désactivée.',
+          });
+          successCount++;
+        }
+      }
+    } else if (action === 'delete') {
+      for (const id of ids) {
+        const prod = productMap.get(id);
+        if (!prod) {
+          results.push({ id, status: 'failed', reason: 'Produit introuvable ou non autorisé.' });
+          failedCount++;
+          continue;
+        }
+
+        // Vérifier si lié à des ventes
+        const [sales] = await connection.query(
+          'SELECT id FROM sale_items WHERE product_id = ? LIMIT 1',
+          [id]
+        );
+        if (sales.length > 0) {
+          results.push({
+            id,
+            name: prod.name,
+            status: 'skipped',
+            reason: 'Lié à des ventes existantes. Désactivez-le plutôt.',
+          });
+          skippedCount++;
+          continue;
+        }
+
+        // Vérifier si lié à des commandes fournisseurs
+        const [orders] = await connection.query(
+          'SELECT id FROM supplier_order_items WHERE product_id = ? LIMIT 1',
+          [id]
+        );
+        if (orders.length > 0) {
+          results.push({
+            id,
+            name: prod.name,
+            status: 'skipped',
+            reason: 'Lié à des commandes fournisseurs.',
+          });
+          skippedCount++;
+          continue;
+        }
+
+        // Vérifier compositions
+        const [comps] = await connection.query(
+          'SELECT id FROM product_compositions WHERE ingredient_id = ? OR parent_product_id = ? LIMIT 1',
+          [id, id]
+        );
+        if (comps.length > 0) {
+          results.push({
+            id,
+            name: prod.name,
+            status: 'skipped',
+            reason: 'Utilisé comme ingrédient ou plat composé.',
+          });
+          skippedCount++;
+          continue;
+        }
+
+        // Soft delete valide
+        await connection.query(
+          'UPDATE products SET deleted_at = NOW(), is_active = 0 WHERE id = ?',
+          [id]
+        );
+        results.push({ id, name: prod.name, status: 'success', message: 'Produit supprimé.' });
+        successCount++;
+      }
+    }
+
+    await connection.commit();
+
+    res.status(200).json({
+      success: true,
+      message: `${successCount} produit(s) traité(s) avec succès.`,
+      data: {
+        total_requested: ids.length,
+        success_count: successCount,
+        skipped_count: skippedCount,
+        failed_count: failedCount,
+        results,
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+};
+
 module.exports = {
   createProduct,
   getProducts,
@@ -1344,4 +1559,6 @@ module.exports = {
   getStockMovements,
   getProductCompositions,
   updateProductCompositions,
+  bulkProductAction,
 };
+

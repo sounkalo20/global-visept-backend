@@ -100,4 +100,19 @@ const updateClientSchema = z.object({
     .optional(),
 });
 
-module.exports = { createClientSchema, updateClientSchema };
+const bulkClientSchema = z.object({
+  ids: z
+    .array(z.number().int().positive())
+    .min(1, 'Au moins un client doit être sélectionné.'),
+  action: z.enum(['activate', 'deactivate', 'change_city', 'delete'], {
+    errorMap: () => ({ message: 'Action bulk non supportée pour les clients.' }),
+  }),
+  params: z
+    .object({
+      city: z.string().max(100).optional().nullable(),
+      reason: z.string().max(500).optional(),
+    })
+    .optional(),
+});
+
+module.exports = { createClientSchema, updateClientSchema, bulkClientSchema };

@@ -5,6 +5,7 @@ const {
   createEmployee,
   updateEmployee,
   deleteEmployee,
+  bulkEmployeeAction,
 } = require('../controllers/employee.controller');
 const authenticate = require('../middlewares/auth.middleware');
 const { requireMembership } = require('../middlewares/membership.middleware');
@@ -13,6 +14,9 @@ const { subscriptionContext, requireFeature, enforceLimit } = require('../middle
 // Toutes les routes nécessitent d'être authentifié
 router.use(authenticate);
 const { requirePermission } = require('../middlewares/permission.middleware');
+
+// Actions en masse
+router.post('/bulk', requireMembership(), requirePermission('employees.edit'), subscriptionContext, requireFeature('module_employees'), bulkEmployeeAction);
 
 // Obtenir la liste des employés
 // On utilise company_id dans les queries (req.query.company_id)

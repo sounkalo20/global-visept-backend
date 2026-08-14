@@ -8,6 +8,7 @@ const {
   deleteExpense,
   getExpenseStats,
   getCategories,
+  bulkExpenseAction,
 } = require("../controllers/expense.controller");
 const authenticate = require("../middlewares/auth.middleware");
 const validate = require("../middlewares/validate.middleware");
@@ -15,10 +16,19 @@ const { requireMembership } = require("../middlewares/membership.middleware");
 const {
   createExpenseSchema,
   updateExpenseSchema,
+  bulkExpenseSchema,
 } = require("../validators/expense.validator");
 
 // Toutes les routes nécessitent une authentification
 router.use(authenticate);
+
+// POST /api/expenses/bulk - Actions en masse sur les dépenses
+router.post(
+  "/bulk",
+  requireMembership(["owner", "manager", "cashier"]),
+  validate(bulkExpenseSchema),
+  bulkExpenseAction
+);
 
 // GET /api/expenses/categories - Liste des catégories
 router.get("/categories", requireMembership(), getCategories);

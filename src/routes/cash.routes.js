@@ -3,6 +3,9 @@ const router = express.Router();
 const {
   getCashRegisters,
   createCashRegister,
+  updateCashRegister,
+  toggleCashRegisterStatus,
+  deleteCashRegister,
   openSession,
   closeSession,
   getActiveSession,
@@ -30,6 +33,27 @@ router.post(
   requireMembership(),
   requirePermission('cash.registers.manage'),
   createCashRegister
+);
+
+router.put(
+  '/registers/:id',
+  requireMembership(),
+  requirePermission('cash.registers.manage'),
+  updateCashRegister
+);
+
+router.patch(
+  '/registers/:id/toggle-status',
+  requireMembership(),
+  requirePermission('cash.registers.manage'),
+  toggleCashRegisterStatus
+);
+
+router.delete(
+  '/registers/:id',
+  requireMembership(),
+  requirePermission('cash.registers.manage'),
+  deleteCashRegister
 );
 
 router.post(

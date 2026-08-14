@@ -12,10 +12,19 @@ const {
     updateSupplier,
     deleteSupplier,
     toggleSupplierStatus,
+    bulkSupplierAction,
 } = require('../controllers/supplier.controller');
 
 // Toutes les routes nécessitent authentification + appartenance à l'entreprise
 router.use(authenticate);
+
+// ─── Actions en Masse ──────────────────────────────────
+router.post(
+    '/bulk',
+    requireMembership(),
+    requirePermission('suppliers.edit'),
+    bulkSupplierAction
+);
 
 // ─── CRUD Fournisseurs ────────────────────────────────
 router.post(

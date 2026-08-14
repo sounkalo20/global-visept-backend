@@ -8,8 +8,9 @@ const {
   updateStock,
   deleteProduct,
   getStockMovements,
-  getProductCompositions,      // ← AJOUTÉ
-  updateProductCompositions,   // ← AJOUTÉ
+  getProductCompositions,
+  updateProductCompositions,
+  bulkProductAction,
 } = require("../controllers/product.controller");
 const authenticate = require("../middlewares/auth.middleware");
 const validate = require("../middlewares/validate.middleware");
@@ -21,10 +22,20 @@ const {
   createProductSchema,
   updateProductSchema,
   updateStockSchema,
+  bulkProductSchema,
 } = require("../validators/product.validator");
 
 // Toutes les routes nécessitent une authentification
 router.use(authenticate);
+
+// POST /api/products/bulk - Actions en masse sur les produits
+router.post(
+  "/bulk",
+  requireMembership(),
+  requirePermission('products.edit'),
+  validate(bulkProductSchema),
+  bulkProductAction
+);
 
 // POST /api/products - Créer un produit (owner ou manager)
 router.post(

@@ -16,9 +16,13 @@ const {
     getOrderPayments,
     updatePayment,
     deletePayment,
+    bulkSupplierOrderAction,
 } = require('../controllers/supplierOrder.controller');
 
 router.use(authenticate);
+
+// ─── ACTIONS EN MASSE ──────────────────────────────────
+router.post('/bulk', requireMembership(), requirePermission('purchases.edit'), bulkSupplierOrderAction);
 
 // ─── COMMANDES ────────────────────────────────────────
 router.post('/', requireMembership(), requirePermission('purchases.create'), createOrder);

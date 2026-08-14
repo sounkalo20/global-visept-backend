@@ -137,8 +137,29 @@ const updateStockSchema = z.object({
   note: z.string().max(500).optional().nullable(),
 });
 
+const bulkProductSchema = z.object({
+  ids: z
+    .array(z.number().int().positive())
+    .min(1, "Au moins un produit doit être sélectionné."),
+  action: z.enum(
+    ["activate", "deactivate", "change_category", "toggle_stock_management", "delete"],
+    {
+      errorMap: () => ({ message: "Action bulk non supportée pour les produits." }),
+    }
+  ),
+  params: z
+    .object({
+      category_id: z.number().int().positive().optional().nullable(),
+      manage_stock: z.boolean().optional(),
+      reason: z.string().max(500).optional(),
+    })
+    .optional(),
+});
+
 module.exports = {
   createProductSchema,
   updateProductSchema,
   updateStockSchema,
+  bulkProductSchema,
 };
+

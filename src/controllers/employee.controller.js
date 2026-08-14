@@ -320,9 +320,161 @@ const deleteEmployee = async (req, res, next) => {
   }
 };
 
+// ─── ACTIONS EN MASSE (BULK ACTIONS) ──────────────────
+const bulkEmployeeAction = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  try {
+    const companyId = req.company?.id || req.body.company_id || req.query.company_id;
+    const { ids, action, params = {} } = req.body;
+    const currentUserId = req.user.id;
+
+    if (!ids || ids.length === 0) {
+      throw new AppError('Aucun employé sélectionné.', 400);
+    }
+
+    if (!companyId) {
+      throw new AppError("L'ID de l'entreprise est requis.", 400);
+    }
+
+    // Récupérer les employés sélectionnés
+    const [memberships] = await connection.query(
+      `SELECT m.id as membership_id, m.user_id, m.is_active, m.role_id, r.name as role_name, u.first_name, u.last_name
+       FROM memberships m
+       JOIN users u ON m.user_id = u.id
+       JOIN roles r ON m.role_id = r.id
+       WHERE m.user_id IN (?) AND m.company_id = ?`,
+      [ids, companyId]
+    );
+
+    const memberMap = new Map(memberships.map((m) => [m.user_id, m]));
+    const results = [];
+    let successCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    await connection.beginTransaction();
+
+    if (action === 'activate') {
+      for (const id of ids) {
+        const mem = memberMap.get(id);
+        const name = mem ? `${mem.first_name || ''} ${mem.last_name || ''}`.trim() : `#${id}`;
+
+        if (!mem) {
+          results.push({ id, status: 'failed', reason: 'Employé introuvable dans cette entreprise.' });
+          failedCount++;
+        } else if (mem.is_active === 1) {
+          results.push({ id, name, status: 'skipped', reason: "L'employé est déjà actif." });
+          skippedCount++;
+        } else {
+          await connection.query('UPDATE memberships SET is_active = 1 WHERE id = ?', [mem.membership_id]);
+          results.push({ id, name, status: 'success', message: 'Accès activé.' });
+          successCount++;
+        }
+      }
+    } else if (action === 'deactivate') {
+      for (const id of ids) {
+        const mem = memberMap.get(id);
+        const name = mem ? `${mem.first_name || ''} ${mem.last_name || ''}`.trim() : `#${id}`;
+
+        if (!mem) {
+          results.push({ id, status: 'failed', reason: 'Employé introuvable dans cette entreprise.' });
+          failedCount++;
+        } else if (id === currentUserId) {
+          results.push({ id, name, status: 'skipped', reason: 'Vous ne pouvez pas désactiver votre propre compte.' });
+          skippedCount++;
+        } else if (mem.role_name === 'Propriétaire') {
+          results.push({ id, name, status: 'skipped', reason: 'Impossible de désactiver le Propriétaire.' });
+          skippedCount++;
+        } else if (mem.is_active === 0) {
+          results.push({ id, name, status: 'skipped', reason: "L'employé est déjà inactif." });
+          skippedCount++;
+        } else {
+          await connection.query('UPDATE memberships SET is_active = 0 WHERE id = ?', [mem.membership_id]);
+          results.push({ id, name, status: 'success', message: 'Accès désactivé.' });
+          successCount++;
+        }
+      }
+    } else if (action === 'change_role') {
+      if (!params.role_id) {
+        throw new AppError('Le nouveau rôle est requis.', 400);
+      }
+
+      const [targetRole] = await connection.query(
+        'SELECT id, name FROM roles WHERE id = ? AND company_id = ?',
+        [params.role_id, companyId]
+      );
+
+      if (targetRole.length === 0) {
+        throw new AppError('Rôle cible introuvable dans cette entreprise.', 404);
+      }
+      if (targetRole[0].name === 'Propriétaire') {
+        throw new AppError('Impossible d\'assigner le rôle Propriétaire en masse.', 403);
+      }
+
+      for (const id of ids) {
+        const mem = memberMap.get(id);
+        const name = mem ? `${mem.first_name || ''} ${mem.last_name || ''}`.trim() : `#${id}`;
+
+        if (!mem) {
+          results.push({ id, status: 'failed', reason: 'Employé introuvable dans cette entreprise.' });
+          failedCount++;
+        } else if (mem.role_name === 'Propriétaire') {
+          results.push({ id, name, status: 'skipped', reason: 'Impossible de modifier le rôle du Propriétaire.' });
+          skippedCount++;
+        } else {
+          await connection.query('UPDATE memberships SET role_id = ? WHERE id = ?', [params.role_id, mem.membership_id]);
+          results.push({ id, name, status: 'success', message: `Rôle mis à jour vers "${targetRole[0].name}".` });
+          successCount++;
+        }
+      }
+    } else if (action === 'delete') {
+      for (const id of ids) {
+        const mem = memberMap.get(id);
+        const name = mem ? `${mem.first_name || ''} ${mem.last_name || ''}`.trim() : `#${id}`;
+
+        if (!mem) {
+          results.push({ id, status: 'failed', reason: 'Employé introuvable dans cette entreprise.' });
+          failedCount++;
+        } else if (id === currentUserId) {
+          results.push({ id, name, status: 'skipped', reason: 'Vous ne pouvez pas supprimer votre propre adhésion.' });
+          skippedCount++;
+        } else if (mem.role_name === 'Propriétaire') {
+          results.push({ id, name, status: 'skipped', reason: 'Impossible de supprimer le Propriétaire.' });
+          skippedCount++;
+        } else {
+          await connection.query('DELETE FROM memberships WHERE id = ?', [mem.membership_id]);
+          results.push({ id, name, status: 'success', message: 'Employé retiré de la boutique.' });
+          successCount++;
+        }
+      }
+    }
+
+    await connection.commit();
+
+    res.status(200).json({
+      success: true,
+      message: `${successCount} employé(s) traité(s) avec succès.`,
+      data: {
+        total_requested: ids.length,
+        success_count: successCount,
+        skipped_count: skippedCount,
+        failed_count: failedCount,
+        results,
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+};
+
 module.exports = {
   getEmployees,
   createEmployee,
   updateEmployee,
   deleteEmployee,
+  bulkEmployeeAction,
 };
+
