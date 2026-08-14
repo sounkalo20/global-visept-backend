@@ -9,6 +9,7 @@ const requireMembership = (allowedRoles = []) => {
   return async (req, res, next) => {
     try {
       const companyId =
+        req.headers?.['x-company-id'] ||
         req.body?.company_id ||
         req.params?.company_id ||
         req.query?.company_id ||

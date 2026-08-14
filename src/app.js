@@ -28,6 +28,7 @@ const rolesRoutes = require('./routes/roles.routes');
 const warehouseRoutes = require('./routes/warehouse.routes');
 const employeeRoutes = require('./routes/employee.routes');
 const cashRoutes = require('./routes/cash.routes');
+const importExportRoutes = require('./routes/importExport.routes');
 
 //routes pour les compagnies de type restaurant 
 const restaurantProductRoutes = require('./routes/restaurant/product.routes');
@@ -75,6 +76,7 @@ app.use('/api/rbac', rolesRoutes); // Nouveau point d'entrée pour les rôles et
 app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/cash', cashRoutes);
+app.use('/api/import-export', importExportRoutes);
 
 //dashboard routes
 app.use('/api/shop', dashboardRoutes);
