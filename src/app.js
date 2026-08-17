@@ -30,6 +30,7 @@ const employeeRoutes = require('./routes/employee.routes');
 const cashRoutes = require('./routes/cash.routes');
 const importExportRoutes = require('./routes/importExport.routes');
 const profitRoutes = require('./routes/profit.routes');
+const searchRoutes = require('./routes/search.routes');
 
 //routes pour les compagnies de type restaurant 
 const restaurantProductRoutes = require('./routes/restaurant/product.routes');
@@ -79,6 +80,7 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/cash', cashRoutes);
 app.use('/api/import-export', importExportRoutes);
 app.use('/api/profits', profitRoutes);
+app.use('/api/search', searchRoutes);
 
 //dashboard routes
 app.use('/api/shop', dashboardRoutes);
