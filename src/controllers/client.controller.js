@@ -521,6 +521,137 @@ const getClientStats = async (req, res, next) => {
   }
 };
 
+// ─── ACTIONS EN MASSE (BULK ACTIONS) ──────────────────
+const bulkClientAction = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  try {
+    const companyId = req.company.id;
+    const { ids, action, params = {} } = req.body;
+
+    if (!ids || ids.length === 0) {
+      throw new AppError('Aucun client sélectionné.', 400);
+    }
+
+    const [clients] = await connection.query(
+      `SELECT id, full_name, is_active, city, current_debt 
+       FROM clients 
+       WHERE id IN (?) AND company_id = ? AND deleted_at IS NULL`,
+      [ids, companyId]
+    );
+
+    const clientMap = new Map(clients.map((c) => [c.id, c]));
+    const results = [];
+    let successCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    await connection.beginTransaction();
+
+    if (action === 'activate') {
+      for (const id of ids) {
+        const client = clientMap.get(id);
+        if (!client) {
+          results.push({ id, status: 'failed', reason: 'Client introuvable ou non autorisé.' });
+          failedCount++;
+        } else if (client.is_active === 1) {
+          results.push({ id, name: client.full_name, status: 'skipped', reason: 'Le client est déjà actif.' });
+          skippedCount++;
+        } else {
+          await connection.query('UPDATE clients SET is_active = 1 WHERE id = ?', [id]);
+          results.push({ id, name: client.full_name, status: 'success', message: 'Client activé.' });
+          successCount++;
+        }
+      }
+    } else if (action === 'deactivate') {
+      for (const id of ids) {
+        const client = clientMap.get(id);
+        if (!client) {
+          results.push({ id, status: 'failed', reason: 'Client introuvable ou non autorisé.' });
+          failedCount++;
+        } else if (client.is_active === 0) {
+          results.push({ id, name: client.full_name, status: 'skipped', reason: 'Le client est déjà inactif.' });
+          skippedCount++;
+        } else {
+          await connection.query('UPDATE clients SET is_active = 0 WHERE id = ?', [id]);
+          results.push({ id, name: client.full_name, status: 'success', message: 'Client désactivé.' });
+          successCount++;
+        }
+      }
+    } else if (action === 'change_city') {
+      const targetCity = params.city ? params.city.trim() : null;
+      for (const id of ids) {
+        const client = clientMap.get(id);
+        if (!client) {
+          results.push({ id, status: 'failed', reason: 'Client introuvable ou non autorisé.' });
+          failedCount++;
+        } else {
+          await connection.query('UPDATE clients SET city = ? WHERE id = ?', [targetCity, id]);
+          results.push({
+            id,
+            name: client.full_name,
+            status: 'success',
+            message: targetCity ? `Ville changée vers "${targetCity}".` : 'Ville réinitialisée.',
+          });
+          successCount++;
+        }
+      }
+    } else if (action === 'delete') {
+      for (const id of ids) {
+        const client = clientMap.get(id);
+        if (!client) {
+          results.push({ id, status: 'failed', reason: 'Client introuvable ou non autorisé.' });
+          failedCount++;
+          continue;
+        }
+
+        // Vérifier les dettes
+        const [debts] = await connection.query(
+          'SELECT id FROM client_debts WHERE client_id = ? AND status IN ("pending", "partial", "overdue") LIMIT 1',
+          [id]
+        );
+
+        if (debts.length > 0 || parseFloat(client.current_debt || 0) > 0) {
+          results.push({
+            id,
+            name: client.full_name,
+            status: 'skipped',
+            reason: 'Dettes en cours non soldées. Régularisez d\'abord sa situation financière.',
+          });
+          skippedCount++;
+          continue;
+        }
+
+        // Soft delete
+        await connection.query(
+          'UPDATE clients SET deleted_at = NOW(), is_active = 0 WHERE id = ?',
+          [id]
+        );
+        results.push({ id, name: client.full_name, status: 'success', message: 'Client supprimé.' });
+        successCount++;
+      }
+    }
+
+    await connection.commit();
+
+    res.status(200).json({
+      success: true,
+      message: `${successCount} client(s) traité(s) avec succès.`,
+      data: {
+        total_requested: ids.length,
+        success_count: successCount,
+        skipped_count: skippedCount,
+        failed_count: failedCount,
+        results,
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+};
+
 module.exports = {
   createClient,
   getClients,
@@ -529,4 +660,5 @@ module.exports = {
   updateClient,
   deleteClient,
   getClientStats,
-};
+  bulkClientAction,
+};

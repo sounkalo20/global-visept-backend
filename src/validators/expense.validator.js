@@ -65,11 +65,25 @@ const updateExpenseSchema = z.object({
   description: z.string().max(2000).optional().nullable().or(z.literal('')),
   category: z.enum(expenseCategories).optional(),
   amount: z.number().positive('Le montant doit être supérieur à 0.').optional(),
-  currency: z.string().length(3).optional(),
-  payment_method: z.enum(paymentMethods).optional(),
   payment_reference: z.string().max(100).optional().nullable().or(z.literal('')),
   expense_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   notes: z.string().max(1000).optional().nullable().or(z.literal('')),
 });
 
-module.exports = { createExpenseSchema, updateExpenseSchema };
+const bulkExpenseSchema = z.object({
+  ids: z
+    .array(z.number().int().positive())
+    .min(1, 'Au moins une dépense doit être sélectionnée.'),
+  action: z.enum(['change_category', 'change_payment_method', 'delete'], {
+    errorMap: () => ({ message: 'Action bulk non supportée pour les dépenses.' }),
+  }),
+  params: z
+    .object({
+      category: z.enum(expenseCategories).optional(),
+      payment_method: z.enum(paymentMethods).optional(),
+      reason: z.string().max(500).optional(),
+    })
+    .optional(),
+});
+
+module.exports = { createExpenseSchema, updateExpenseSchema, bulkExpenseSchema, expenseCategories, paymentMethods };

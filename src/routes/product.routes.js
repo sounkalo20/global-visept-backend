@@ -8,21 +8,34 @@ const {
   updateStock,
   deleteProduct,
   getStockMovements,
-  getProductCompositions,      // ← AJOUTÉ
-  updateProductCompositions,   // ← AJOUTÉ
+  getProductCompositions,
+  updateProductCompositions,
+  bulkProductAction,
 } = require("../controllers/product.controller");
 const authenticate = require("../middlewares/auth.middleware");
 const validate = require("../middlewares/validate.middleware");
 const { requireMembership } = require("../middlewares/membership.middleware");
+const { requirePermission } = require("../middlewares/permission.middleware");
+const { subscriptionContext, enforceLimit } = require("../middlewares/subscription.middleware");
 const { uploadProductImage } = require("../middlewares/upload.middleware");
 const {
   createProductSchema,
   updateProductSchema,
   updateStockSchema,
+  bulkProductSchema,
 } = require("../validators/product.validator");
 
 // Toutes les routes nécessitent une authentification
 router.use(authenticate);
+
+// POST /api/products/bulk - Actions en masse sur les produits
+router.post(
+  "/bulk",
+  requireMembership(),
+  requirePermission('products.edit'),
+  validate(bulkProductSchema),
+  bulkProductAction
+);
 
 // POST /api/products - Créer un produit (owner ou manager)
 router.post(
@@ -59,15 +72,22 @@ router.post(
       next(error);
     }
   },
-  requireMembership(["owner", "manager"]),
+  requireMembership(),
+  requirePermission('products.create'),
+  subscriptionContext,
+  enforceLimit('max_products', async (companyId) => {
+    const pool = require('../config/db');
+    const [rows] = await pool.query('SELECT COUNT(id) as count FROM products WHERE company_id = ? AND deleted_at IS NULL', [companyId]);
+    return rows[0].count;
+  }),
   createProduct,
 );
 
 // GET /api/products?company_id=X - Lister les produits
-router.get("/", requireMembership(), getProducts);
+router.get("/", requireMembership(), requirePermission('products.view'), getProducts);
 
 // GET /api/products/:id?company_id=X - Détails d'un produit
-router.get("/:id", requireMembership(), getProductById);
+router.get("/:id", requireMembership(), requirePermission('products.view'), getProductById);
 
 // PUT /api/products/:id - Modifier un produit (owner ou manager)
 router.put(
@@ -102,7 +122,8 @@ router.put(
       next(error);
     }
   },
-  requireMembership(["owner", "manager"]),
+  requireMembership(),
+  requirePermission('products.edit'),
   updateProduct,
 );
 
@@ -110,27 +131,30 @@ router.put(
 router.patch(
   "/:id/stock",
   validate(updateStockSchema),
-  requireMembership(["owner", "manager"]),
+  requireMembership(),
+  requirePermission('inventory.adjust'),
   updateStock,
 );
 
 // GET /api/products/:id/movements?company_id=X - Historique des mouvements de stock
-router.get("/:id/movements", requireMembership(), getStockMovements);
+router.get("/:id/movements", requireMembership(), requirePermission('inventory.view'), getStockMovements);
 
 // DELETE /api/products/:id?company_id=X - Supprimer un produit (owner seulement)
-router.delete("/:id", requireMembership(["owner"]), deleteProduct);
+router.delete("/:id", requireMembership(), requirePermission('products.delete'), deleteProduct);
 
 // GET /api/products/:id/compositions?company_id=X - Obtenir les compositions du plat
 router.get(
   "/:id/compositions",
   requireMembership(),
+  requirePermission('products.view'),
   getProductCompositions
 );
 
 // PUT /api/products/:id/compositions?company_id=X - Mettre à jour les compositions du plat (owner ou manager)
 router.put(
   "/:id/compositions",
-  requireMembership(["owner", "manager"]),
+  requireMembership(),
+  requirePermission('products.edit'),
   updateProductCompositions
 );
 

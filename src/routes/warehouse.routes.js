@@ -4,7 +4,11 @@ const router = express.Router();
 const warehouseController = require('../controllers/warehouse.controller');
 const authenticate = require('../middlewares/auth.middleware');
 
+const { ownerSubscriptionContext, requireFeature } = require('../middlewares/subscription.middleware');
+
 router.use(authenticate);
+router.use(ownerSubscriptionContext);
+router.use(requireFeature('module_warehouses'));
 
 // ⚠️ ATTENTION : L'ORDRE EST CRUCIAL !
 // Les routes avec des chemins fixes DOIVENT être avant les routes avec des paramètres dynamiques (:id)
@@ -33,6 +37,7 @@ router.get('/:id/adjustments', warehouseController.getWarehouseAdjustments);
 
 // 6. Routes de transfert
 router.post('/:id/transfer', warehouseController.transferToShop);
+router.post('/transfers/:id/cancel', warehouseController.cancelTransfer);
 
 // 7. Routes de stocks et mouvements
 router.get('/:id/stocks', warehouseController.getWarehouseStocks);

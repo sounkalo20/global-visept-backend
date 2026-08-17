@@ -11,6 +11,7 @@ const {
 const authenticate = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const { requireMembership } = require('../middlewares/membership.middleware');
+const { requirePermission } = require('../middlewares/permission.middleware');
 const { createSaleSchema, updateSaleSchema } = require('../validators/sale.validator');
 
 // Toutes les routes nécessitent une authentification
@@ -20,6 +21,7 @@ router.use(authenticate);
 router.get(
   '/stats',
   requireMembership(),
+  requirePermission('sales.view'),
   getSalesStats
 );
 
@@ -27,7 +29,8 @@ router.get(
 router.post(
   '/',
   validate(createSaleSchema),
-  requireMembership(['owner', 'manager', 'cashier']),
+  requireMembership(),
+  requirePermission('sales.create'),
   createSale
 );
 
@@ -35,6 +38,7 @@ router.post(
 router.get(
   '/',
   requireMembership(),
+  requirePermission('sales.view'),
   getSales
 );
 
@@ -42,6 +46,7 @@ router.get(
 router.get(
   '/:id',
   requireMembership(),
+  requirePermission('sales.view'),
   getSaleById
 );
 
@@ -49,14 +54,16 @@ router.get(
 router.put(
   '/:id',
   validate(updateSaleSchema),
-  requireMembership(['owner', 'manager', 'cashier']),
+  requireMembership(),
+  requirePermission('sales.edit'),
   updateSale
 );
 
 // POST /api/sales/:id/cancel - Annuler une vente (owner, manager, cashier)
 router.post(
   '/:id/cancel',
-  requireMembership(['owner', 'manager', 'cashier']),
+  requireMembership(),
+  requirePermission('sales.cancel'),
   cancelSale
 );
 

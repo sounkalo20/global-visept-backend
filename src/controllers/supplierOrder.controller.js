@@ -1103,6 +1103,161 @@ const deletePayment = async (req, res, next) => {
     }
 };
 
+// ─── ACTIONS EN MASSE (BULK ACTIONS) ──────────────────
+const bulkSupplierOrderAction = async (req, res, next) => {
+    const connection = await pool.getConnection();
+    try {
+        const companyId = req.company.id;
+        const { ids, action, params = {} } = req.body;
+
+        if (!ids || ids.length === 0) {
+            throw new AppError('Aucune commande sélectionnée.', 400);
+        }
+
+        const [orders] = await connection.query(
+            `SELECT id, order_number, status, supplier_id, total_amount, paid_amount 
+             FROM supplier_orders 
+             WHERE id IN (?) AND company_id = ?`,
+            [ids, companyId]
+        );
+
+        const orderMap = new Map(orders.map((o) => [o.id, o]));
+        const results = [];
+        let successCount = 0;
+        let skippedCount = 0;
+        let failedCount = 0;
+
+        await connection.beginTransaction();
+
+        if (action === 'mark_as_ordered') {
+            for (const id of ids) {
+                const order = orderMap.get(id);
+                if (!order) {
+                    results.push({ id, status: 'failed', reason: 'Commande introuvable ou non autorisée.' });
+                    failedCount++;
+                } else if (order.status !== 'draft') {
+                    results.push({
+                        id,
+                        name: order.order_number,
+                        status: 'skipped',
+                        reason: `La commande est déjà au statut "${order.status}" (seuls les brouillons peuvent passer à "Commandée").`,
+                    });
+                    skippedCount++;
+                } else {
+                    await connection.query('UPDATE supplier_orders SET status = "ordered" WHERE id = ?', [id]);
+                    results.push({ id, name: order.order_number, status: 'success', message: 'Statut passé à Commandée.' });
+                    successCount++;
+                }
+            }
+        } else if (action === 'mark_as_confirmed') {
+            for (const id of ids) {
+                const order = orderMap.get(id);
+                if (!order) {
+                    results.push({ id, status: 'failed', reason: 'Commande introuvable ou non autorisée.' });
+                    failedCount++;
+                } else if (order.status !== 'ordered') {
+                    results.push({
+                        id,
+                        name: order.order_number,
+                        status: 'skipped',
+                        reason: `La commande doit être au statut "Commandée" pour être confirmée (statut actuel: "${order.status}").`,
+                    });
+                    skippedCount++;
+                } else {
+                    await connection.query('UPDATE supplier_orders SET status = "confirmed" WHERE id = ?', [id]);
+                    results.push({ id, name: order.order_number, status: 'success', message: 'Statut passé à Confirmée.' });
+                    successCount++;
+                }
+            }
+        } else if (action === 'cancel') {
+            for (const id of ids) {
+                const order = orderMap.get(id);
+                if (!order) {
+                    results.push({ id, status: 'failed', reason: 'Commande introuvable ou non autorisée.' });
+                    failedCount++;
+                    continue;
+                }
+
+                if (['received', 'partial', 'canceled'].includes(order.status)) {
+                    results.push({
+                        id,
+                        name: order.order_number,
+                        status: 'skipped',
+                        reason: `La commande a le statut "${order.status}". Les commandes reçues ou partiellement reçues ne peuvent être annulées en masse.`,
+                    });
+                    skippedCount++;
+                    continue;
+                }
+
+                // Vérifier si des articles ont été reçus
+                const [items] = await connection.query(
+                    'SELECT SUM(quantity_received) as total_received FROM supplier_order_items WHERE order_id = ?',
+                    [id]
+                );
+                if (items[0].total_received > 0) {
+                    results.push({
+                        id,
+                        name: order.order_number,
+                        status: 'skipped',
+                        reason: 'Des articles ont déjà été réceptionnés sur cette commande.',
+                    });
+                    skippedCount++;
+                    continue;
+                }
+
+                await connection.query('UPDATE supplier_orders SET status = "canceled" WHERE id = ?', [id]);
+                await updateSupplierBalance(connection, order.supplier_id, companyId);
+                results.push({ id, name: order.order_number, status: 'success', message: 'Commande annulée.' });
+                successCount++;
+            }
+        } else if (action === 'delete') {
+            for (const id of ids) {
+                const order = orderMap.get(id);
+                if (!order) {
+                    results.push({ id, status: 'failed', reason: 'Commande introuvable ou non autorisée.' });
+                    failedCount++;
+                    continue;
+                }
+
+                if (order.status !== 'draft') {
+                    results.push({
+                        id,
+                        name: order.order_number,
+                        status: 'skipped',
+                        reason: `Seules les commandes au statut "Brouillon" peuvent être supprimées (statut actuel: "${order.status}").`,
+                    });
+                    skippedCount++;
+                    continue;
+                }
+
+                await connection.query('DELETE FROM supplier_order_items WHERE order_id = ?', [id]);
+                await connection.query('DELETE FROM supplier_orders WHERE id = ?', [id]);
+                results.push({ id, name: order.order_number, status: 'success', message: 'Brouillon de commande supprimé.' });
+                successCount++;
+            }
+        }
+
+        await connection.commit();
+
+        res.status(200).json({
+            success: true,
+            message: `${successCount} commande(s) traitée(s) avec succès.`,
+            data: {
+                total_requested: ids.length,
+                success_count: successCount,
+                skipped_count: skippedCount,
+                failed_count: failedCount,
+                results,
+            },
+        });
+    } catch (error) {
+        await connection.rollback();
+        next(error);
+    } finally {
+        connection.release();
+    }
+};
+
 module.exports = {
     createOrder,
     getOrders,
@@ -1116,4 +1271,5 @@ module.exports = {
     getOrderPayments,
     updatePayment,
     deletePayment,
-};
+    bulkSupplierOrderAction,
+};

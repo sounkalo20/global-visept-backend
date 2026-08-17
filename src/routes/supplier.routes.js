@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const authenticate = require('../middlewares/auth.middleware');
 const { requireMembership } = require('../middlewares/membership.middleware');
+const { requirePermission } = require('../middlewares/permission.middleware');
 const validate = require('../middlewares/validate.middleware');
 const {
     createSupplier,
@@ -11,45 +12,60 @@ const {
     updateSupplier,
     deleteSupplier,
     toggleSupplierStatus,
+    bulkSupplierAction,
 } = require('../controllers/supplier.controller');
 
 // Toutes les routes nécessitent authentification + appartenance à l'entreprise
 router.use(authenticate);
 
+// ─── Actions en Masse ──────────────────────────────────
+router.post(
+    '/bulk',
+    requireMembership(),
+    requirePermission('suppliers.edit'),
+    bulkSupplierAction
+);
+
 // ─── CRUD Fournisseurs ────────────────────────────────
 router.post(
     '/',
-    requireMembership(['owner', 'manager']),
+    requireMembership(),
+    requirePermission('suppliers.create'),
     createSupplier
 );
 
 router.get(
     '/',
     requireMembership(),
+    requirePermission('suppliers.view'),
     getSuppliers
 );
 
 router.get(
     '/:id',
     requireMembership(),
+    requirePermission('suppliers.view'),
     getSupplierById
 );
 
 router.put(
     '/:id',
-    requireMembership(['owner', 'manager']),
+    requireMembership(),
+    requirePermission('suppliers.edit'),
     updateSupplier
 );
 
 router.delete(
     '/:id',
-    requireMembership(['owner']),
+    requireMembership(),
+    requirePermission('suppliers.delete'),
     deleteSupplier
 );
 
 router.put(
     '/:id/toggle-status',
-    requireMembership(['owner', 'manager']),
+    requireMembership(),
+    requirePermission('suppliers.edit'),
     toggleSupplierStatus
 );
 

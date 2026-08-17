@@ -78,11 +78,14 @@ const createProduct = async (req, res, next) => {
       }
     }
 
-    // Vérifier que la catégorie existe et appartient à la même entreprise
-    if (category_id) {
+    const [ownerRows] = await connection.query("SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1", [companyId]);
+    const owner_id = ownerRows.length > 0 ? ownerRows[0].user_id : null;
+
+    // Vérifier que la catégorie existe et appartient au propriétaire
+    if (category_id && owner_id) {
       const [categories] = await connection.query(
-        'SELECT id FROM categories WHERE id = ? AND company_id = ? AND deleted_at IS NULL',
-        [category_id, companyId]
+        'SELECT id FROM categories WHERE id = ? AND owner_id = ? AND deleted_at IS NULL',
+        [category_id, owner_id]
       );
 
       if (categories.length === 0) {
@@ -142,11 +145,10 @@ const createProduct = async (req, res, next) => {
 
     let catalogProductId = null;
     if (product_type === 'product' || product_type === 'ingredient' || product_type === 'raw_material') {
-      const [ownerRows] = await connection.query("SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1", [companyId]);
-      if (ownerRows.length > 0) {
+      if (owner_id) {
         const ProductCatalogService = require("../services/ProductCatalogService");
-        const catalogProduct = await ProductCatalogService.findOrCreateCatalogProduct(ownerRows[0].user_id, {
-          name, barcode, description, image_url: imageUrl, unit_id: unit_id || 1
+        const catalogProduct = await ProductCatalogService.findOrCreateCatalogProduct(owner_id, {
+          name, barcode, description, image_url: imageUrl, unit_id: unit_id || 1, category_id
         }, connection);
         catalogProductId = catalogProduct.id;
       }
@@ -312,23 +314,37 @@ const getProducts = async (req, res, next) => {
 
     // Construire la requête avec filtres
     let query = `
-      SELECT p.*, c.name as category_name, u.name as unit_name, u.symbol as unit_symbol
+      SELECT p.*, 
+        COALESCE(pc.name, p.name) as name,
+        COALESCE(pc.description, p.description) as description,
+        COALESCE(pc.barcode, p.barcode) as barcode,
+        COALESCE(pc.image_url, p.image_url) as image_url,
+        COALESCE(pc.category_id, p.category_id) as category_id,
+        COALESCE(pc.unit_id, p.unit_id) as unit_id,
+        c.name as category_name, u.name as unit_name, u.symbol as unit_symbol,
+      (
+        SELECT JSON_ARRAYAGG(JSON_OBJECT('warehouse_id', ws.warehouse_id, 'warehouse_name', w.name, 'quantity', ws.quantity))
+        FROM warehouse_stocks ws
+        JOIN warehouses w ON w.id = ws.warehouse_id
+        WHERE ws.catalog_product_id = p.catalog_product_id
+      ) as warehouse_stocks
       FROM products p
-      LEFT JOIN categories c ON p.category_id = c.id
-      LEFT JOIN measurement_units u ON p.unit_id = u.id
+      LEFT JOIN product_catalog pc ON p.catalog_product_id = pc.id
+      LEFT JOIN categories c ON COALESCE(pc.category_id, p.category_id) = c.id
+      LEFT JOIN measurement_units u ON COALESCE(pc.unit_id, p.unit_id) = u.id
       WHERE p.company_id = ? AND p.deleted_at IS NULL
     `;
     const queryParams = [companyId];
 
     // Filtre par catégorie
     if (category_id) {
-      query += " AND p.category_id = ?";
+      query += " AND COALESCE(pc.category_id, p.category_id) = ?";
       queryParams.push(category_id);
     }
 
     // Recherche par nom, barcode ou SKU
     if (search) {
-      query += " AND (p.name LIKE ? OR p.barcode LIKE ? OR p.sku LIKE ?)";
+      query += " AND (COALESCE(pc.name, p.name) LIKE ? OR COALESCE(pc.barcode, p.barcode) LIKE ? OR p.sku LIKE ?)";
       const searchTerm = `%${search}%`;
       queryParams.push(searchTerm, searchTerm, searchTerm);
     }
@@ -362,8 +378,8 @@ const getProducts = async (req, res, next) => {
 
     // Compter le total avant pagination
     const countQuery = query.replace(
-      "SELECT p.*, c.name as category_name, u.name as unit_name, u.symbol as unit_symbol",
-      "SELECT COUNT(*) as total",
+      /SELECT p\.\*,[\s\S]*?FROM products p/m,
+      "SELECT COUNT(*) as total FROM products p"
     );
     const [countResult] = await pool.query(countQuery, queryParams);
     const total = countResult[0].total;
@@ -379,24 +395,42 @@ const getProducts = async (req, res, next) => {
       ? sort_by
       : "created_at";
     const order = sort_order.toUpperCase() === "ASC" ? "ASC" : "DESC";
-    query += ` ORDER BY p.${sortColumn} ${order}`;
+    if (sortColumn === 'name') {
+      query += ` ORDER BY COALESCE(pc.name, p.name) ${order}`;
+    } else {
+      query += ` ORDER BY p.${sortColumn} ${order}`;
+    }
 
     // Pagination
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    query += " LIMIT ? OFFSET ?";
-    queryParams.push(parseInt(limit), offset);
+    const isAll = limit === 'all' || limit === '-1' || parseInt(limit) === -1;
+    let parsedLimit = parseInt(limit);
+    
+    if (!isAll) {
+      const offset = (parseInt(page) - 1) * parsedLimit;
+      query += " LIMIT ? OFFSET ?";
+      queryParams.push(parsedLimit, offset);
+    }
 
     const [products] = await pool.query(query, queryParams);
+
+    // Parse warehouse_stocks if it's a string
+    const processedProducts = products.map((product) => {
+      let wh_stocks = [];
+      if (product.warehouse_stocks) {
+        wh_stocks = typeof product.warehouse_stocks === 'string' ? JSON.parse(product.warehouse_stocks) : product.warehouse_stocks;
+      }
+      return { ...product, warehouse_stocks: wh_stocks };
+    });
 
     res.status(200).json({
       success: true,
       data: {
-        products,
+        products: processedProducts,
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page: isAll ? 1 : parseInt(page),
+          limit: isAll ? total : parsedLimit,
           total,
-          pages: Math.ceil(total / parseInt(limit)),
+          pages: isAll ? 1 : Math.ceil(total / parsedLimit),
         },
       },
     });
@@ -414,10 +448,18 @@ const getProductById = async (req, res, next) => {
     const companyId = req.company.id;
 
     const [products] = await pool.query(
-      `SELECT p.*, c.name as category_name, u.name as unit_name, u.symbol as unit_symbol
+      `SELECT p.*, 
+        COALESCE(pc.name, p.name) as name,
+        COALESCE(pc.description, p.description) as description,
+        COALESCE(pc.barcode, p.barcode) as barcode,
+        COALESCE(pc.image_url, p.image_url) as image_url,
+        COALESCE(pc.category_id, p.category_id) as category_id,
+        COALESCE(pc.unit_id, p.unit_id) as unit_id,
+        c.name as category_name, u.name as unit_name, u.symbol as unit_symbol
        FROM products p
-       LEFT JOIN categories c ON p.category_id = c.id
-       LEFT JOIN measurement_units u ON p.unit_id = u.id
+       LEFT JOIN product_catalog pc ON p.catalog_product_id = pc.id
+       LEFT JOIN categories c ON COALESCE(pc.category_id, p.category_id) = c.id
+       LEFT JOIN measurement_units u ON COALESCE(pc.unit_id, p.unit_id) = u.id
        WHERE p.id = ? AND p.company_id = ? AND p.deleted_at IS NULL`,
       [id, companyId],
     );
@@ -548,12 +590,16 @@ const updateProduct = async (req, res, next) => {
     }
 
     if (category_id !== undefined && category_id !== null) {
-      const [categories] = await connection.query(
-        'SELECT id FROM categories WHERE id = ? AND company_id = ? AND deleted_at IS NULL',
-        [category_id, companyId],
-      );
-      if (categories.length === 0) {
-        throw new AppError('La catégorie spécifiée est introuvable.', 404);
+      const [ownerRows] = await connection.query("SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1", [companyId]);
+      const owner_id = ownerRows.length > 0 ? ownerRows[0].user_id : null;
+      if (owner_id) {
+        const [categories] = await connection.query(
+          'SELECT id FROM categories WHERE id = ? AND owner_id = ? AND deleted_at IS NULL',
+          [category_id, owner_id],
+        );
+        if (categories.length === 0) {
+          throw new AppError('La catégorie spécifiée est introuvable.', 404);
+        }
       }
     }
 
@@ -617,7 +663,8 @@ const updateProduct = async (req, res, next) => {
                  description = ?, 
                  barcode = ?, 
                  image_url = ?, 
-                 unit_id = ?
+                 unit_id = ?,
+                 category_id = ?
              WHERE id = ? AND owner_id = ?`,
             [
               name || product.name,
@@ -625,6 +672,7 @@ const updateProduct = async (req, res, next) => {
               barcode || product.barcode,
               imageUrl || product.image_url,
               unit_id || product.unit_id || 1,
+              category_id !== undefined ? category_id : product.category_id,
               catalogProductId,
               ownerId
             ]
@@ -639,8 +687,8 @@ const updateProduct = async (req, res, next) => {
             Date.now();
 
           const [catalogResult] = await connection.query(
-            `INSERT INTO product_catalog (owner_id, name, slug, barcode, description, image_url, unit_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO product_catalog (owner_id, name, slug, barcode, description, image_url, unit_id, category_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               ownerId,
               name || product.name,
@@ -648,7 +696,8 @@ const updateProduct = async (req, res, next) => {
               barcode || null,
               description || null,
               imageUrl || null,
-              unit_id || product.unit_id || 1
+              unit_id || product.unit_id || 1,
+              category_id !== undefined ? category_id : product.category_id || null
             ]
           );
 
@@ -1285,6 +1334,221 @@ const updateProductCompositions = async (req, res, next) => {
 };
 
 
+// ─── ACTIONS EN MASSE (BULK ACTIONS) ──────────────────
+const bulkProductAction = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  try {
+    const companyId = req.company.id;
+    const { ids, action, params = {} } = req.body;
+
+    if (!ids || ids.length === 0) {
+      throw new AppError('Aucun produit sélectionné.', 400);
+    }
+
+    // 1. Récupérer les produits existants appartenant à l'entreprise
+    const [products] = await connection.query(
+      `SELECT id, name, is_active, category_id, manage_stock, catalog_product_id 
+       FROM products 
+       WHERE id IN (?) AND company_id = ? AND deleted_at IS NULL`,
+      [ids, companyId]
+    );
+
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const results = [];
+    let successCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    await connection.beginTransaction();
+
+    if (action === 'activate') {
+      for (const id of ids) {
+        const prod = productMap.get(id);
+        if (!prod) {
+          results.push({ id, status: 'failed', reason: 'Produit introuvable ou non autorisé.' });
+          failedCount++;
+        } else if (prod.is_active === 1) {
+          results.push({ id, name: prod.name, status: 'skipped', reason: 'Le produit est déjà actif.' });
+          skippedCount++;
+        } else {
+          await connection.query('UPDATE products SET is_active = 1 WHERE id = ?', [id]);
+          results.push({ id, name: prod.name, status: 'success', message: 'Produit activé.' });
+          successCount++;
+        }
+      }
+    } else if (action === 'deactivate') {
+      for (const id of ids) {
+        const prod = productMap.get(id);
+        if (!prod) {
+          results.push({ id, status: 'failed', reason: 'Produit introuvable ou non autorisé.' });
+          failedCount++;
+        } else if (prod.is_active === 0) {
+          results.push({ id, name: prod.name, status: 'skipped', reason: 'Le produit est déjà inactif.' });
+          skippedCount++;
+        } else {
+          await connection.query('UPDATE products SET is_active = 0 WHERE id = ?', [id]);
+          results.push({ id, name: prod.name, status: 'success', message: 'Produit désactivé.' });
+          successCount++;
+        }
+      }
+    } else if (action === 'change_category') {
+      let targetCategoryName = 'Non catégorisé';
+      const targetCatId = params.category_id || null;
+
+      if (targetCatId) {
+        const [ownerRows] = await connection.query(
+          "SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1",
+          [companyId]
+        );
+        const owner_id = ownerRows.length > 0 ? ownerRows[0].user_id : null;
+
+        const [cat] = await connection.query(
+          `SELECT id, name FROM categories 
+           WHERE id = ? 
+             AND (owner_id = ? OR owner_id IN (SELECT user_id FROM memberships WHERE company_id = ?) OR owner_id IS NULL) 
+             AND deleted_at IS NULL`,
+          [targetCatId, owner_id, companyId]
+        );
+        if (cat.length === 0) {
+          throw new AppError('La catégorie spécifiée est introuvable.', 404);
+        }
+        targetCategoryName = cat[0].name;
+      }
+
+      for (const id of ids) {
+        const prod = productMap.get(id);
+        if (!prod) {
+          results.push({ id, status: 'failed', reason: 'Produit introuvable ou non autorisé.' });
+          failedCount++;
+        } else {
+          await connection.query('UPDATE products SET category_id = ? WHERE id = ?', [
+            targetCatId,
+            id,
+          ]);
+          if (prod.catalog_product_id) {
+            await connection.query('UPDATE product_catalog SET category_id = ? WHERE id = ?', [
+              targetCatId,
+              prod.catalog_product_id,
+            ]);
+          }
+          results.push({
+            id,
+            name: prod.name,
+            status: 'success',
+            message: `Catégorie changée vers "${targetCategoryName}".`,
+          });
+          successCount++;
+        }
+      }
+    } else if (action === 'toggle_stock_management') {
+      const manageStockVal = params.manage_stock ? 1 : 0;
+      for (const id of ids) {
+        const prod = productMap.get(id);
+        if (!prod) {
+          results.push({ id, status: 'failed', reason: 'Produit introuvable ou non autorisé.' });
+          failedCount++;
+        } else {
+          await connection.query('UPDATE products SET manage_stock = ? WHERE id = ?', [
+            manageStockVal,
+            id,
+          ]);
+          results.push({
+            id,
+            name: prod.name,
+            status: 'success',
+            message: manageStockVal ? 'Gestion de stock activée.' : 'Gestion de stock désactivée.',
+          });
+          successCount++;
+        }
+      }
+    } else if (action === 'delete') {
+      for (const id of ids) {
+        const prod = productMap.get(id);
+        if (!prod) {
+          results.push({ id, status: 'failed', reason: 'Produit introuvable ou non autorisé.' });
+          failedCount++;
+          continue;
+        }
+
+        // Vérifier si lié à des ventes
+        const [sales] = await connection.query(
+          'SELECT id FROM sale_items WHERE product_id = ? LIMIT 1',
+          [id]
+        );
+        if (sales.length > 0) {
+          results.push({
+            id,
+            name: prod.name,
+            status: 'skipped',
+            reason: 'Lié à des ventes existantes. Désactivez-le plutôt.',
+          });
+          skippedCount++;
+          continue;
+        }
+
+        // Vérifier si lié à des commandes fournisseurs
+        const [orders] = await connection.query(
+          'SELECT id FROM supplier_order_items WHERE product_id = ? LIMIT 1',
+          [id]
+        );
+        if (orders.length > 0) {
+          results.push({
+            id,
+            name: prod.name,
+            status: 'skipped',
+            reason: 'Lié à des commandes fournisseurs.',
+          });
+          skippedCount++;
+          continue;
+        }
+
+        // Vérifier compositions
+        const [comps] = await connection.query(
+          'SELECT id FROM product_compositions WHERE ingredient_id = ? OR parent_product_id = ? LIMIT 1',
+          [id, id]
+        );
+        if (comps.length > 0) {
+          results.push({
+            id,
+            name: prod.name,
+            status: 'skipped',
+            reason: 'Utilisé comme ingrédient ou plat composé.',
+          });
+          skippedCount++;
+          continue;
+        }
+
+        // Soft delete valide
+        await connection.query(
+          'UPDATE products SET deleted_at = NOW(), is_active = 0 WHERE id = ?',
+          [id]
+        );
+        results.push({ id, name: prod.name, status: 'success', message: 'Produit supprimé.' });
+        successCount++;
+      }
+    }
+
+    await connection.commit();
+
+    res.status(200).json({
+      success: true,
+      message: `${successCount} produit(s) traité(s) avec succès.`,
+      data: {
+        total_requested: ids.length,
+        success_count: successCount,
+        skipped_count: skippedCount,
+        failed_count: failedCount,
+        results,
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+};
+
 module.exports = {
   createProduct,
   getProducts,
@@ -1295,4 +1559,6 @@ module.exports = {
   getStockMovements,
   getProductCompositions,
   updateProductCompositions,
+  bulkProductAction,
 };
+

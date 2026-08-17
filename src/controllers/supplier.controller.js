@@ -469,6 +469,149 @@ const toggleSupplierStatus = async (req, res, next) => {
     }
 };
 
+// ─── ACTIONS EN MASSE (BULK ACTIONS) ──────────────────
+const bulkSupplierAction = async (req, res, next) => {
+    const connection = await pool.getConnection();
+    try {
+        const companyId = req.company.id;
+        const { ids, action, params = {} } = req.body;
+
+        if (!ids || ids.length === 0) {
+            throw new AppError('Aucun fournisseur sélectionné.', 400);
+        }
+
+        const [suppliers] = await connection.query(
+            `SELECT id, company_name, is_active, city, current_balance 
+             FROM suppliers 
+             WHERE id IN (?) AND company_id = ? AND deleted_at IS NULL`,
+            [ids, companyId]
+        );
+
+        const supplierMap = new Map(suppliers.map((s) => [s.id, s]));
+        const results = [];
+        let successCount = 0;
+        let skippedCount = 0;
+        let failedCount = 0;
+
+        await connection.beginTransaction();
+
+        if (action === 'activate') {
+            for (const id of ids) {
+                const sup = supplierMap.get(id);
+                if (!sup) {
+                    results.push({ id, status: 'failed', reason: 'Fournisseur introuvable ou non autorisé.' });
+                    failedCount++;
+                } else if (sup.is_active === 1) {
+                    results.push({ id, name: sup.company_name, status: 'skipped', reason: 'Le fournisseur est déjà actif.' });
+                    skippedCount++;
+                } else {
+                    await connection.query('UPDATE suppliers SET is_active = 1 WHERE id = ?', [id]);
+                    results.push({ id, name: sup.company_name, status: 'success', message: 'Fournisseur activé.' });
+                    successCount++;
+                }
+            }
+        } else if (action === 'deactivate') {
+            for (const id of ids) {
+                const sup = supplierMap.get(id);
+                if (!sup) {
+                    results.push({ id, status: 'failed', reason: 'Fournisseur introuvable ou non autorisé.' });
+                    failedCount++;
+                } else if (sup.is_active === 0) {
+                    results.push({ id, name: sup.company_name, status: 'skipped', reason: 'Le fournisseur est déjà inactif.' });
+                    skippedCount++;
+                } else {
+                    await connection.query('UPDATE suppliers SET is_active = 0 WHERE id = ?', [id]);
+                    results.push({ id, name: sup.company_name, status: 'success', message: 'Fournisseur désactivé.' });
+                    successCount++;
+                }
+            }
+        } else if (action === 'change_city') {
+            const targetCity = params.city ? params.city.trim() : null;
+            for (const id of ids) {
+                const sup = supplierMap.get(id);
+                if (!sup) {
+                    results.push({ id, status: 'failed', reason: 'Fournisseur introuvable ou non autorisé.' });
+                    failedCount++;
+                } else {
+                    await connection.query('UPDATE suppliers SET city = ? WHERE id = ?', [targetCity, id]);
+                    results.push({
+                        id,
+                        name: sup.company_name,
+                        status: 'success',
+                        message: targetCity ? `Ville changée vers "${targetCity}".` : 'Ville réinitialisée.',
+                    });
+                    successCount++;
+                }
+            }
+        } else if (action === 'delete') {
+            for (const id of ids) {
+                const sup = supplierMap.get(id);
+                if (!sup) {
+                    results.push({ id, status: 'failed', reason: 'Fournisseur introuvable ou non autorisé.' });
+                    failedCount++;
+                    continue;
+                }
+
+                // Vérifier commandes en cours
+                const [orders] = await connection.query(
+                    "SELECT COUNT(*) as total FROM supplier_orders WHERE supplier_id = ? AND status NOT IN ('canceled', 'received')",
+                    [id]
+                );
+
+                if (orders[0].total > 0) {
+                    results.push({
+                        id,
+                        name: sup.company_name,
+                        status: 'skipped',
+                        reason: 'Commandes fournisseurs en cours. Clôturez ou annulez-les d\'abord.',
+                    });
+                    skippedCount++;
+                    continue;
+                }
+
+                // Vérifier solde dû
+                if (parseFloat(sup.current_balance || 0) > 0) {
+                    results.push({
+                        id,
+                        name: sup.company_name,
+                        status: 'skipped',
+                        reason: `Solde impayé de ${parseFloat(sup.current_balance).toLocaleString()} FCFA. Réglez-le d\'abord.`,
+                    });
+                    skippedCount++;
+                    continue;
+                }
+
+                // Soft delete
+                await connection.query(
+                    'UPDATE suppliers SET deleted_at = NOW() WHERE id = ? AND company_id = ?',
+                    [id, companyId]
+                );
+                results.push({ id, name: sup.company_name, status: 'success', message: 'Fournisseur supprimé.' });
+                successCount++;
+            }
+        }
+
+        await connection.commit();
+
+        res.status(200).json({
+            success: true,
+            message: `${successCount} fournisseur(s) traité(s) avec succès.`,
+            data: {
+                total_requested: ids.length,
+                success_count: successCount,
+                skipped_count: skippedCount,
+                failed_count: failedCount,
+                results,
+            },
+        });
+    } catch (error) {
+        await connection.rollback();
+        next(error);
+    } finally {
+        connection.release();
+    }
+};
+
 module.exports = {
     createSupplier,
     getSuppliers,
@@ -476,4 +619,5 @@ module.exports = {
     updateSupplier,
     deleteSupplier,
     toggleSupplierStatus,
-};
+    bulkSupplierAction,
+};

@@ -6,6 +6,7 @@ const validate = require('../middlewares/validate.middleware');
 const { createCompanySchema } = require('../validators/company.validator');
 const { uploadCompanyLogo, uploadPaymentProof } = require('../middlewares/upload.middleware');
 const { requireMembership } = require('../middlewares/membership.middleware');
+const { requirePermission } = require('../middlewares/permission.middleware');
 
 // Toutes les routes sont protégées
 router.use(authenticate);
@@ -31,7 +32,8 @@ router.get('/:id', getCompanyById);
 // ─── MODIFIER UNE ENTREPRISE ────────────────────────────
 router.put(
   '/:id',
-  requireMembership(['owner', 'manager']),
+  requireMembership(),
+  requirePermission('settings.manage'),
   uploadCompanyLogo,
   updateCompany
 );
@@ -39,7 +41,8 @@ router.put(
 // ─── UPGRADE ABONNEMENT ─────────────────────────────────
 router.post(
   '/:id/subscription/upgrade',
-  requireMembership(['owner']),
+  requireMembership(),
+  requirePermission('settings.manage'),
   uploadPaymentProof,
   requestSubscriptionUpgrade
 );
@@ -48,6 +51,7 @@ router.post(
 router.get(
   '/:id/invoices',
   requireMembership(),
+  requirePermission('settings.manage'),
   getCompanyInvoices
 );
 
@@ -55,6 +59,7 @@ router.get(
 router.get(
   '/:id/payment-proofs',
   requireMembership(),
+  requirePermission('settings.manage'),
   getPaymentProofs
 );
 

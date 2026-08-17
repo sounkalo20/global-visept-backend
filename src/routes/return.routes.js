@@ -8,6 +8,8 @@ const {
 const authenticate = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const { requireMembership } = require('../middlewares/membership.middleware');
+const { requirePermission } = require('../middlewares/permission.middleware');
+const { subscriptionContext, requireFeature } = require('../middlewares/subscription.middleware');
 const { createReturnSchema } = require('../validators/return.validator');
 
 router.use(authenticate);
@@ -16,7 +18,10 @@ router.use(authenticate);
 router.post(
   '/',
   validate(createReturnSchema),
-  requireMembership(['owner', 'manager', 'cashier']),
+  requireMembership(),
+  requirePermission('sales.return'),
+  subscriptionContext,
+  requireFeature('module_returns'),
   createReturn
 );
 
@@ -24,6 +29,9 @@ router.post(
 router.get(
   '/',
   requireMembership(),
+  requirePermission('sales.view'),
+  subscriptionContext,
+  requireFeature('module_returns'),
   getReturns
 );
 
@@ -31,6 +39,9 @@ router.get(
 router.get(
   '/:id',
   requireMembership(),
+  requirePermission('sales.view'),
+  subscriptionContext,
+  requireFeature('module_returns'),
   getReturnById
 );
 

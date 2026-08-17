@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const authenticate = require('../../middlewares/auth.middleware');
 const { requireMembership } = require('../../middlewares/membership.middleware');
+const { requirePermission } = require('../../middlewares/permission.middleware');
 const {
     createSale,
     getSales,
@@ -16,11 +17,11 @@ const {
 router.use(authenticate);
 
 // ─── VENTES ───────────────────────────────────────────
-router.post('/sales', requireMembership(['owner', 'manager', 'cashier']), createSale);
-router.get('/sales', requireMembership(), getSales);
-router.get('/sales/stats', requireMembership(), getSalesStats);
-router.get('/sales/:id', requireMembership(), getSaleById);
-router.put('/sales/:id', requireMembership(['owner', 'manager']), updateSale);
-router.put('/sales/:id/cancel', requireMembership(['owner', 'manager']), cancelSale);
+router.post('/sales', requireMembership(), requirePermission('sales.create'), createSale);
+router.get('/sales', requireMembership(), requirePermission('sales.view'), getSales);
+router.get('/sales/stats', requireMembership(), requirePermission('sales.view'), getSalesStats);
+router.get('/sales/:id', requireMembership(), requirePermission('sales.view'), getSaleById);
+router.put('/sales/:id', requireMembership(), requirePermission('sales.edit'), updateSale);
+router.put('/sales/:id/cancel', requireMembership(), requirePermission('sales.cancel'), cancelSale);
 
 module.exports = router;

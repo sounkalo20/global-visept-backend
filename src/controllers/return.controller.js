@@ -50,7 +50,6 @@ const createReturn = async (req, res, next) => {
     const returnItemsData = [];
 
     for (const item of items) {
-      // Obtenir les infos du sale_item
       const [saleItems] = await connection.query(
         `SELECT si.*, p.manage_stock, p.current_stock, p.name as product_name, p.cost_price 
          FROM sale_items si
@@ -66,7 +65,6 @@ const createReturn = async (req, res, next) => {
       const saleItem = saleItems[0];
       const quantityToReturn = Number(item.quantity);
 
-      // Vérifier combien a déjà été retourné pour ce sale_item pour éviter de retourner plus que vendu
       const [existingReturns] = await connection.query(
         `SELECT SUM(quantity) as returned_qty FROM sale_return_items WHERE sale_item_id = ?`,
         [saleItem.id]
@@ -80,14 +78,7 @@ const createReturn = async (req, res, next) => {
       }
 
       const unitPrice = Number(saleItem.unit_price);
-      // Prorata du discount : on ignore ici pour simplifier, ou on pourrait le déduire. 
-      // On prend juste unit_price * qty
       let itemTotalPrice = unitPrice * quantityToReturn;
-
-      // S'il y a un discount au niveau item, on pourrait le proratiser, mais unit_price est le prix appliqué avant discount global.
-      // Par simplicité, on utilise l'unit_price facturé pour calculer le montant remboursé.
-      // Si la vente avait un discount global, on ne le récupère pas forcément ici.
-
       totalAmountReturned += itemTotalPrice;
 
       returnItemsData.push({
@@ -95,7 +86,7 @@ const createReturn = async (req, res, next) => {
         quantity: quantityToReturn,
         unitPrice,
         totalPrice: itemTotalPrice,
-        returnType: item.return_type, // 'reintegrable' ou 'defective'
+        returnType: item.return_type,
         reason: item.reason || null
       });
     }
@@ -127,23 +118,18 @@ const createReturn = async (req, res, next) => {
       if (saleItem.manage_stock) {
         const stockBefore = Number(saleItem.current_stock);
         let stockAfter = stockBefore;
-        
         let movementType = 'return_customer';
 
         if (returnType === 'reintegrable') {
-          // On remet dans le stock
           stockAfter = stockBefore + quantity;
           await connection.query(
             "UPDATE products SET current_stock = ? WHERE id = ?",
             [stockAfter, saleItem.product_id]
           );
         } else if (returnType === 'defective') {
-          // Produit défectueux -> perte (ne retourne pas au stock disponible)
           movementType = 'return_defective';
-          // stockAfter reste inchangé car la quantité n'est pas réintégrée
         }
 
-        // Mouvement
         await connection.query(
           `INSERT INTO inventory_movements (
             company_id, product_id, movement_type, quantity,
@@ -154,7 +140,7 @@ const createReturn = async (req, res, next) => {
             companyId,
             saleItem.product_id,
             movementType,
-            returnType === 'reintegrable' ? quantity : 0, // Enregistre la qté réintégrée (0 si perte)
+            returnType === 'reintegrable' ? quantity : 0,
             stockBefore,
             stockAfter,
             sale_id,
@@ -173,13 +159,87 @@ const createReturn = async (req, res, next) => {
       [newReturnedAmount, sale_id]
     );
 
+    // ======================================================
+    // 6. GESTION DE CAISSE — Enregistrer le remboursement
+    // ======================================================
+    // Récupérer les paiements originaux de la vente (avec leur session de caisse)
+    const [salePayments] = await connection.query(
+      `SELECT cash_session_id, payment_method, amount FROM sale_payments WHERE sale_id = ?`,
+      [sale_id]
+    );
+
+    // Chercher si une session de caisse était liée à cette vente
+    const originalSessionId = salePayments.find(p => p.cash_session_id)?.cash_session_id || null;
+
+    if (originalSessionId) {
+      // Cette vente était liée à une session de caisse
+      // Chercher si la session est encore ouverte
+      const [sessionCheck] = await connection.query(
+        `SELECT id, status FROM cash_sessions WHERE id = ? LIMIT 1`,
+        [originalSessionId]
+      );
+
+      // Chercher s'il y a une session courante ouverte (pour l'utilisateur actuel ou la même caisse)
+      const [currentOpenSession] = await connection.query(
+        `SELECT id FROM cash_sessions 
+         WHERE company_id = ? AND status = 'open' 
+         ORDER BY opened_at DESC LIMIT 1`,
+        [companyId]
+      );
+
+      // Déterminer la session à utiliser pour le mouvement de remboursement :
+      // - Si la session originale est encore ouverte → on l'utilise
+      // - Sinon, si une autre session est ouverte → on l'utilise
+      // - Sinon → on ne crée pas de mouvement de caisse (cohérence comptable)
+      let targetSessionId = null;
+      if (sessionCheck.length > 0 && sessionCheck[0].status === 'open') {
+        targetSessionId = originalSessionId;
+      } else if (currentOpenSession.length > 0) {
+        targetSessionId = currentOpenSession[0].id;
+      }
+
+      if (targetSessionId) {
+        // Calculer le montant remboursé par mode de paiement (proratisé)
+        const totalOriginalPaid = salePayments.reduce((sum, p) => sum + Number(p.amount), 0);
+        
+        for (const payment of salePayments) {
+          if (!payment.cash_session_id) continue;
+          
+          // Proratiser le remboursement selon la proportion payée par ce moyen
+          const ratio = totalOriginalPaid > 0 ? Number(payment.amount) / totalOriginalPaid : 1;
+          const refundAmount = Math.round(totalAmountReturned * ratio);
+          
+          if (refundAmount <= 0) continue;
+
+          // Enregistrer le mouvement de remboursement dans la caisse
+          await connection.query(
+            `INSERT INTO cash_movements (session_id, type, payment_method, amount, reference_id, notes)
+             VALUES (?, 'sale_refund', ?, ?, ?, ?)`,
+            [targetSessionId, payment.payment_method, refundAmount, returnId, `Retour ${returnNumber} (vente ${sale.sale_number})`]
+          );
+
+          // Si paiement en espèces → réduire le expected_closing_amount
+          if (payment.payment_method === 'cash') {
+            await connection.query(
+              `UPDATE cash_sessions SET expected_closing_amount = GREATEST(0, expected_closing_amount - ?) WHERE id = ?`,
+              [refundAmount, targetSessionId]
+            );
+          }
+        }
+      }
+      // Si targetSessionId est null → retour sans session ouverte → aucun mouvement de caisse (comportement correct)
+    }
+    // Si originalSessionId est null → vente sans session (vente manuelle) → aucun mouvement de caisse
+
     await connection.commit();
 
     res.status(201).json({
       success: true,
       message: "Retour enregistré avec succès.",
       data: {
-        return_id: returnId
+        return_id: returnId,
+        return_number: returnNumber,
+        total_amount_returned: totalAmountReturned,
       }
     });
 
@@ -190,6 +250,8 @@ const createReturn = async (req, res, next) => {
     connection.release();
   }
 };
+
+
 
 // ─── LISTER TOUS LES RETOURS ────────────────────────────
 const getReturns = async (req, res, next) => {

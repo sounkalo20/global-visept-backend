@@ -471,6 +471,97 @@ const getCategories = async (req, res, next) => {
   }
 };
 
+// ─── ACTIONS EN MASSE (BULK ACTIONS) ──────────────────
+const bulkExpenseAction = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  try {
+    const companyId = req.company.id;
+    const { ids, action, params = {} } = req.body;
+
+    if (!ids || ids.length === 0) {
+      throw new AppError('Aucune dépense sélectionnée.', 400);
+    }
+
+    const [expenses] = await connection.query(
+      `SELECT id, title, amount, category, payment_method 
+       FROM expenses 
+       WHERE id IN (?) AND company_id = ? AND deleted_at IS NULL`,
+      [ids, companyId]
+    );
+
+    const expenseMap = new Map(expenses.map((e) => [e.id, e]));
+    const results = [];
+    let successCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+
+    await connection.beginTransaction();
+
+    if (action === 'change_category') {
+      if (!params.category) {
+        throw new AppError('La nouvelle catégorie est requise.', 400);
+      }
+      for (const id of ids) {
+        const exp = expenseMap.get(id);
+        if (!exp) {
+          results.push({ id, status: 'failed', reason: 'Dépense introuvable ou non autorisée.' });
+          failedCount++;
+        } else {
+          await connection.query('UPDATE expenses SET category = ? WHERE id = ?', [params.category, id]);
+          results.push({ id, name: exp.title, status: 'success', message: `Catégorie mise à jour vers "${params.category}".` });
+          successCount++;
+        }
+      }
+    } else if (action === 'change_payment_method') {
+      if (!params.payment_method) {
+        throw new AppError('Le nouveau mode de paiement est requis.', 400);
+      }
+      for (const id of ids) {
+        const exp = expenseMap.get(id);
+        if (!exp) {
+          results.push({ id, status: 'failed', reason: 'Dépense introuvable ou non autorisée.' });
+          failedCount++;
+        } else {
+          await connection.query('UPDATE expenses SET payment_method = ? WHERE id = ?', [params.payment_method, id]);
+          results.push({ id, name: exp.title, status: 'success', message: `Mode de paiement mis à jour vers "${params.payment_method}".` });
+          successCount++;
+        }
+      }
+    } else if (action === 'delete') {
+      for (const id of ids) {
+        const exp = expenseMap.get(id);
+        if (!exp) {
+          results.push({ id, status: 'failed', reason: 'Dépense introuvable ou non autorisée.' });
+          failedCount++;
+        } else {
+          await connection.query('UPDATE expenses SET deleted_at = NOW() WHERE id = ?', [id]);
+          results.push({ id, name: exp.title, status: 'success', message: 'Dépense supprimée.' });
+          successCount++;
+        }
+      }
+    }
+
+    await connection.commit();
+
+    res.status(200).json({
+      success: true,
+      message: `${successCount} dépense(s) traitée(s) avec succès.`,
+      data: {
+        total_requested: ids.length,
+        success_count: successCount,
+        skipped_count: skippedCount,
+        failed_count: failedCount,
+        results,
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    next(error);
+  } finally {
+    connection.release();
+  }
+};
+
 module.exports = {
   createExpense,
   getExpenses,
@@ -479,4 +570,6 @@ module.exports = {
   deleteExpense,
   getExpenseStats,
   getCategories,
+  bulkExpenseAction,
 };
+
