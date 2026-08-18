@@ -240,8 +240,8 @@ const getSales = async (req, res, next) => {
         if (status) { baseQuery += ' AND s.status = ?'; queryParams.push(status); }
         if (payment_status) { baseQuery += ' AND s.payment_status = ?'; queryParams.push(payment_status); }
         if (search) {
-            baseQuery += ' AND (s.sale_number LIKE ? OR s.client_name LIKE ?)';
-            queryParams.push(`%${search}%`, `%${search}%`);
+            baseQuery += ' AND (s.sale_number LIKE ? OR s.client_name LIKE ? OR c.full_name LIKE ?)';
+            queryParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
         }
 
         const countQuery = `SELECT COUNT(*) as total ${baseQuery}`;

@@ -143,7 +143,14 @@ const getMyCompanies = async (req, res, next) => {
     const [companies] = await pool.query(
       `SELECT 
         c.*,
-        m.role as my_role,
+        CASE 
+          WHEN r.name = 'Propriétaire' THEN 'owner' 
+          WHEN r.name = 'Gérant' THEN 'manager' 
+          WHEN r.name = 'Caissier' THEN 'cashier' 
+          ELSE COALESCE(m.role, r.name) 
+        END as my_role,
+        r.name as role_name,
+        m.role_id,
         m.joined_at as my_joined_at,
         bt.code as business_type_code,
         bt.name as business_type_name,
@@ -189,6 +196,7 @@ const getMyCompanies = async (req, res, next) => {
          ORDER BY spp.created_at DESC LIMIT 1) as last_payment_proof_status
        FROM companies c
        INNER JOIN memberships m ON c.id = m.company_id
+       LEFT JOIN roles r ON m.role_id = r.id
        JOIN business_types bt ON c.business_type_id = bt.id
        JOIN subscription_plans sp ON c.subscription_plan_id = sp.id
        WHERE m.user_id = ? AND m.is_active = 1 AND c.deleted_at IS NULL
@@ -225,9 +233,18 @@ const getCompanyById = async (req, res, next) => {
 
     // Vérifier que l'utilisateur est bien membre de cette entreprise
     const [companies] = await pool.query(
-      `SELECT c.*, m.role as my_role
+      `SELECT c.*, 
+        CASE 
+          WHEN r.name = 'Propriétaire' THEN 'owner' 
+          WHEN r.name = 'Gérant' THEN 'manager' 
+          WHEN r.name = 'Caissier' THEN 'cashier' 
+          ELSE COALESCE(m.role, r.name) 
+        END as my_role,
+        r.name as role_name,
+        m.role_id
        FROM companies c
        INNER JOIN memberships m ON c.id = m.company_id
+       LEFT JOIN roles r ON m.role_id = r.id
        WHERE c.id = ? AND m.user_id = ? AND m.is_active = 1 AND c.deleted_at IS NULL`,
       [id, req.user.id]
     );
@@ -258,8 +275,9 @@ const updateCompany = async (req, res, next) => {
 
     // Vérifier que l'utilisateur est owner ou manager de cette entreprise
     const [memberships] = await connection.query(
-      `SELECT m.role FROM memberships m
-       WHERE m.company_id = ? AND m.user_id = ? AND m.is_active = 1 AND m.role IN ('owner', 'manager')`,
+      `SELECT m.role, r.name as role_name FROM memberships m
+       LEFT JOIN roles r ON m.role_id = r.id
+       WHERE m.company_id = ? AND m.user_id = ? AND m.is_active = 1 AND (r.name IN ('Propriétaire', 'Gérant') OR m.role IN ('owner', 'manager'))`,
       [id, req.user.id]
     );
 
@@ -345,9 +363,16 @@ const updateCompany = async (req, res, next) => {
 
     // Récupérer l'entreprise mise à jour
     const [updatedCompany] = await connection.query(
-      `SELECT c.*, m.role as my_role
+      `SELECT c.*, 
+        CASE 
+          WHEN r.name = 'Propriétaire' THEN 'owner' 
+          WHEN r.name = 'Gérant' THEN 'manager' 
+          WHEN r.name = 'Caissier' THEN 'cashier' 
+          ELSE COALESCE(m.role, r.name) 
+        END as my_role
        FROM companies c
        INNER JOIN memberships m ON c.id = m.company_id
+       LEFT JOIN roles r ON m.role_id = r.id
        WHERE c.id = ? AND m.user_id = ?`,
       [id, req.user.id]
     );
@@ -376,8 +401,9 @@ const requestSubscriptionUpgrade = async (req, res, next) => {
 
     // Vérifier que l'utilisateur est owner
     const [memberships] = await connection.query(
-      `SELECT m.role FROM memberships m
-       WHERE m.company_id = ? AND m.user_id = ? AND m.is_active = 1 AND m.role = 'owner'`,
+      `SELECT m.role, r.name as role_name FROM memberships m
+       LEFT JOIN roles r ON m.role_id = r.id
+       WHERE m.company_id = ? AND m.user_id = ? AND m.is_active = 1 AND (r.name = 'Propriétaire' OR m.role = 'owner')`,
       [id, req.user.id]
     );
 

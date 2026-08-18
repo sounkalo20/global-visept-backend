@@ -1,5 +1,11 @@
 const { z } = require("zod");
 
+const salePaymentItemSchema = z.object({
+  method: z.enum(["cash", "mobile_money", "bank_transfer", "card", "other"]).default("cash"),
+  amount: z.number().min(0, "Le montant du paiement ne peut pas être négatif."),
+  reference: z.string().max(100).optional().nullable(),
+});
+
 const saleItemSchema = z.object({
   product_id: z
     .number()
@@ -37,10 +43,17 @@ const createSaleSchema = z.object({
   payment_status: z.enum(["paid", "partial", "unpaid", "debt"]).default("paid"),
   amount_paid: z.number().min(0).optional().default(0),
   payment_method: z
-    .enum(["cash", "mobile_money", "bank_transfer", "other"])
+    .enum(["cash", "mobile_money", "bank_transfer", "card", "other"])
     .default("cash"),
   payment_reference: z.string().max(100).optional().nullable(),
+  payments: z.array(salePaymentItemSchema).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
+  
+  // Champs optionnels Mode Hors-Ligne & Audit
+  offline_uuid: z.string().uuid("offline_uuid doit être un UUID valide.").optional().nullable(),
+  device_id: z.string().max(64).optional().nullable(),
+  is_offline_sync: z.boolean().optional().default(false),
+  offline_created_at: z.string().optional().nullable(),
 });
 
 const updateSaleSchema = z.object({
@@ -59,9 +72,10 @@ const updateSaleSchema = z.object({
   payment_status: z.enum(["paid", "partial", "unpaid", "debt"]).optional(),
   amount_paid: z.number().min(0).optional(),
   payment_method: z
-    .enum(["cash", "mobile_money", "bank_transfer", "other"])
+    .enum(["cash", "mobile_money", "bank_transfer", "card", "other"])
     .optional(),
   payment_reference: z.string().max(100).optional().nullable(),
+  payments: z.array(salePaymentItemSchema).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
 });
 

@@ -31,6 +31,8 @@ const cashRoutes = require('./routes/cash.routes');
 const importExportRoutes = require('./routes/importExport.routes');
 const profitRoutes = require('./routes/profit.routes');
 const searchRoutes = require('./routes/search.routes');
+const healthRoutes = require('./routes/health.routes');
+const stockAnomalyRoutes = require('./routes/stockAnomaly.routes');
 
 //routes pour les compagnies de type restaurant 
 const restaurantProductRoutes = require('./routes/restaurant/product.routes');
@@ -44,20 +46,28 @@ const restaurantDashboardRoutes = require('./routes/restaurant/dashboard.routes'
 
 
 const app = express();
-app.use(errorHandler);
-app.use('/uploads', express.static('src/uploads'));
 
+// Middlewares globaux
 app.use(cors({
   origin: "*",
 }));
 
 app.use(helmet());
 app.use(morgan("dev"));
+app.use(cookieParser());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static('src/uploads'));
 
-// Routes
+// Route de base (Health check)
+app.get("/", (req, res) => {
+  res.json({
+    message: "VISEPT API running",
+  });
+});
+
+// Routes API
 app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/categories', categoriesRoutes);
@@ -74,25 +84,27 @@ app.use('/api/supplier-payments', supplierPaymentRoutes);
 app.use('/api/returns', returnRoutes);
 // app.use('/api/reports', requireMembership(['owner', 'manager']), reportsRoutes);
 app.use('/api/inventories', inventoryRoutes);
-app.use('/api/rbac', rolesRoutes); // Nouveau point d'entrée pour les rôles et permissions
+app.use('/api/rbac', rolesRoutes); // Point d'entrée pour les rôles et permissions
 app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/cash', cashRoutes);
 app.use('/api/import-export', importExportRoutes);
 app.use('/api/profits', profitRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/health', healthRoutes);
+app.use('/api/stock-anomalies', stockAnomalyRoutes);
 
-//dashboard routes
+// Dashboard routes
 app.use('/api/shop', dashboardRoutes);
 app.use('/api/restaurant', restaurantDashboardRoutes);
 
-// routes pour les compagnies de type restaurant 
+// Routes pour les entreprises de type restaurant 
 app.use('/api/restaurant', restaurantProductRoutes);
 app.use('/api/restaurant', restaurantSaleRoutes);
 app.use('/api/restaurant', restaurantDebtRoutes);
 app.use('/api/restaurant', restaurantPaymentRoutes);
 
-// 404 handler
+// 404 Handler
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,
@@ -100,12 +112,7 @@ app.use((req, res, next) => {
   });
 });
 
-app.use(cookieParser());
-
-app.get("/", (req, res) => {
-  res.json({
-    message: "VISEPT API running",
-  });
-});
+// Global Error Handler (toujours en dernier)
+app.use(errorHandler);
 
 module.exports = app;

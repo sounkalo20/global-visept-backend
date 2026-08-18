@@ -684,7 +684,15 @@ const receiveItems = async (req, res, next) => {
 
                 // S'il n'est pas lié, on le lie à la volée
                 if (!catalogProductId) {
-                    const [ownerRows] = await connection.query("SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1", [companyId]);
+                    const [ownerRows] = await connection.query(
+                        `SELECT m.user_id 
+                         FROM memberships m
+                         LEFT JOIN roles r ON m.role_id = r.id
+                         WHERE m.company_id = ? AND (r.name = 'Propriétaire' OR m.role = 'owner')
+                         ORDER BY (r.name = 'Propriétaire') DESC, m.id ASC
+                         LIMIT 1`,
+                        [companyId]
+                    );
                     if (ownerRows.length > 0) {
                         const ProductCatalogService = require("../services/ProductCatalogService");
                         const catalogProduct = await ProductCatalogService.findOrCreateCatalogProduct(ownerRows[0].user_id, {

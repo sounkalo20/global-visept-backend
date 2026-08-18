@@ -5,7 +5,13 @@ const getOwnerId = async (req) => {
   const companyId = req.query?.company_id || req.body?.company_id || req.query?.companyId || req.body?.companyId || req.body?.destination_company_id;
   if (companyId) {
     const [ownerRows] = await pool.query(
-      "SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1",
+      `SELECT m.user_id 
+       FROM memberships m
+       LEFT JOIN roles r ON m.role_id = r.id
+       WHERE m.company_id = ? 
+         AND (r.name = 'Propriétaire' OR m.role = 'owner')
+       ORDER BY (r.name = 'Propriétaire') DESC, (m.role = 'owner') DESC, m.id ASC
+       LIMIT 1`,
       [companyId]
     );
     if (ownerRows.length > 0) return ownerRows[0].user_id;
@@ -224,7 +230,9 @@ exports.transferToShop = async (req, res, next) => {
     }
 
     const [memberships] = await connection.query(
-      `SELECT id FROM memberships WHERE user_id = ? AND company_id = ? AND role = 'owner'`,
+      `SELECT m.id FROM memberships m
+       LEFT JOIN roles r ON m.role_id = r.id
+       WHERE m.user_id = ? AND m.company_id = ? AND (r.name = 'Propriétaire' OR m.role = 'owner')`,
       [owner_id, destination_company_id]
     );
 

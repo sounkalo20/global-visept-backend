@@ -44,10 +44,57 @@ const createSale = async (req, res, next) => {
       payment_reference,
       payments,
       notes,
+      offline_uuid,
+      device_id,
+      is_offline_sync,
+      offline_created_at,
     } = req.body;
 
     const companyId = req.company.id;
     const userId = req.user.id;
+
+    // ===============================
+    // 🛡️ IDEMPOTENCE CHECK (offline_uuid)
+    // ===============================
+    if (offline_uuid) {
+      const [existingSales] = await connection.query(
+        `SELECT s.*,
+                c.first_name as client_first_name, c.last_name as client_last_name, c.phone as client_phone
+         FROM sales s
+         LEFT JOIN clients c ON s.client_id = c.id
+         WHERE s.offline_uuid = ? AND s.company_id = ? FOR UPDATE`,
+        [offline_uuid, companyId]
+      );
+
+      if (existingSales.length > 0) {
+        const existingSale = existingSales[0];
+        const [existingItems] = await connection.query(
+          `SELECT si.*, p.name as product_name, p.image_url, p.sku
+           FROM sale_items si
+           JOIN products p ON si.product_id = p.id
+           WHERE si.sale_id = ?`,
+          [existingSale.id]
+        );
+        const [existingPayments] = await connection.query(
+          `SELECT * FROM sale_payments WHERE sale_id = ?`,
+          [existingSale.id]
+        );
+
+        await connection.commit();
+        return res.status(200).json({
+          success: true,
+          message: "Vente déjà synchronisée.",
+          data: {
+            sale: {
+              ...existingSale,
+              items: existingItems,
+              payments: existingPayments,
+              duplicate_prevented: true,
+            },
+          },
+        });
+      }
+    }
 
     if (!items || items.length === 0) {
       throw new AppError("Aucun produit dans la vente.", 400);
@@ -69,14 +116,14 @@ const createSale = async (req, res, next) => {
     const saleItemsData = [];
 
     // ===============================
-    // 🧠 ITEMS PROCESSING
+    // 🧠 ITEMS PROCESSING & VERROUILLAGE PRODUITS
     // ===============================
     for (const item of items) {
       const [products] = await connection.query(
         `SELECT id, company_id, cost_price, retail_price, wholesale_price,
                 wholesale_min_qty, manage_stock, current_stock, name
          FROM products 
-         WHERE id = ? AND deleted_at IS NULL`,
+         WHERE id = ? AND deleted_at IS NULL FOR UPDATE`,
         [item.product_id]
       );
 
@@ -104,7 +151,6 @@ const createSale = async (req, res, next) => {
       const retailPrice = Number(product.retail_price);
       const wholesalePrice = Number(product.wholesale_price);
 
-      // auto-detection si pas explicitement custom
       if (unitPrice === retailPrice) {
         priceType = "retail";
       } else if (unitPrice === wholesalePrice) {
@@ -113,19 +159,28 @@ const createSale = async (req, res, next) => {
         priceType = "custom";
       }
 
-      // option fallback si frontend envoie price_type
       if (item.price_type === "retail") priceType = "retail";
       if (item.price_type === "wholesale") priceType = "wholesale";
       if (item.price_type === "custom") priceType = "custom";
 
       // ===============================
-      // 📦 STOCK CHECK
+      // 📦 STOCK CHECK & SURVENTES OFFLINE
       // ===============================
-      if (product.manage_stock && product.current_stock < quantity) {
-        throw new AppError(
-          `Stock insuffisant pour "${product.name}". Disponible: ${product.current_stock}`,
-          400
-        );
+      let oversellQuantity = 0;
+      if (product.manage_stock) {
+        const availableStock = Number(product.current_stock);
+        if (availableStock < quantity) {
+          if (!is_offline_sync) {
+            // Mode en ligne standard : blocage strict
+            throw new AppError(
+              `Stock insuffisant pour "${product.name}". Disponible: ${availableStock}`,
+              400
+            );
+          } else {
+            // Mode hors-ligne synchronisé : calcul de la survente pour anomalie
+            oversellQuantity = quantity - Math.max(0, availableStock);
+          }
+        }
       }
 
       const discountAmount = Number(item.discount_amount || 0);
@@ -140,6 +195,7 @@ const createSale = async (req, res, next) => {
         priceType,
         discountAmount,
         totalPrice,
+        oversellQuantity,
         item,
       });
     }
@@ -190,7 +246,6 @@ const createSale = async (req, res, next) => {
     }
 
     // Calcul du rendu de monnaie (si trop-perçu)
-    // On déduit la monnaie du premier paiement en espèces trouvé, sinon du premier paiement.
     let changeAmount = roundedPaid > roundedTotal ? roundedPaid - roundedTotal : 0;
     if (changeAmount > 0) {
       let changeDeducted = false;
@@ -202,29 +257,30 @@ const createSale = async (req, res, next) => {
         }
       }
       if (!changeDeducted) {
-        // Fallback si pas de paiement cash suffisant
         finalPayments[0].amount -= changeAmount;
       }
     }
 
     const amountDue = 0;
     const finalPaymentStatus = "paid";
-    const primaryPaymentMethod = finalPayments[0].method; // Pour la rétrocompatibilité
+    const primaryPaymentMethod = finalPayments[0].method;
     
     // ===============================
-    // 🔍 CHECK CASH SESSION ACTIVE
+    // 🔍 CHECK CASH SESSION ACTIVE OU FERMÉE
     // ===============================
     let activeCashSessionId = null;
+    let isSessionClosed = false;
     const [sessions] = await connection.query(
-      `SELECT id FROM cash_sessions WHERE user_id = ? AND company_id = ? AND status = 'open' LIMIT 1`,
+      `SELECT id, status FROM cash_sessions WHERE user_id = ? AND company_id = ? ORDER BY id DESC LIMIT 1`,
       [userId, companyId]
     );
     if (sessions.length > 0) {
       activeCashSessionId = sessions[0].id;
+      isSessionClosed = sessions[0].status === 'closed';
     }
 
     const isCashier = req.membership && req.membership.is_system_role && req.membership.role_name === 'Caissier';
-    if (isCashier && !activeCashSessionId) {
+    if (isCashier && !activeCashSessionId && !is_offline_sync) {
       throw new AppError("Vous devez ouvrir une session de caisse avant de pouvoir effectuer une vente.", 403);
     }
 
@@ -232,16 +288,22 @@ const createSale = async (req, res, next) => {
     // 🧾 SALE NUMBER
     // ===============================
     const saleNumber = await generateSaleNumber(connection, companyId);
+    const effectiveSaleDate = offline_created_at ? new Date(offline_created_at) : new Date();
 
     const [saleResult] = await connection.query(
       `INSERT INTO sales (
-        company_id, sale_number, client_id, client_name,
+        company_id, offline_uuid, device_id, is_offline_sync, offline_created_at,
+        sale_number, client_id, client_name,
         subtotal, discount_amount, discount_type, discount_value,
         tax_amount, total_amount, payment_status, amount_paid, amount_due,
         payment_method, payment_reference, status, seller_id, notes, sale_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?)`,
       [
         companyId,
+        offline_uuid || null,
+        device_id || null,
+        is_offline_sync ? 1 : 0,
+        offline_created_at ? new Date(offline_created_at) : null,
         saleNumber,
         client_id || null,
         client_name || null,
@@ -252,12 +314,13 @@ const createSale = async (req, res, next) => {
         0,
         roundedTotal,
         finalPaymentStatus,
-        roundedPaid, // Le montant donné par le client pour calculer le rendu
+        roundedPaid,
         amountDue,
         primaryPaymentMethod,
         finalPayments[0].reference || null,
         userId,
         notes || null,
+        effectiveSaleDate,
       ]
     );
 
@@ -267,7 +330,7 @@ const createSale = async (req, res, next) => {
     // 💰 INSERT SALE PAYMENTS & CASH MOVEMENTS
     // ===============================
     for (const payment of finalPayments) {
-      if (payment.amount <= 0) continue; // Ignorer les paiements tombés à 0 à cause du rendu
+      if (payment.amount <= 0) continue;
 
       await connection.query(
         `INSERT INTO sale_payments (sale_id, cash_session_id, payment_method, amount, reference)
@@ -275,29 +338,38 @@ const createSale = async (req, res, next) => {
         [saleId, activeCashSessionId, payment.method, payment.amount, payment.reference]
       );
 
-      // Si une session de caisse est active, tracer TOUS les mouvements dans la caisse
       if (activeCashSessionId) {
+        const movementNote = isSessionClosed
+          ? `Vente ${saleNumber} (Régularisation offline post-clôture)`
+          : `Vente ${saleNumber}`;
+
         await connection.query(
           `INSERT INTO cash_movements (session_id, type, payment_method, amount, reference_id, notes)
            VALUES (?, 'sale_in', ?, ?, ?, ?)`,
-          [activeCashSessionId, payment.method, payment.amount, saleId, 'Vente ' + saleNumber]
+          [activeCashSessionId, payment.method, payment.amount, saleId, movementNote]
         );
         
-        // Mettre à jour le montant attendu de la caisse (uniquement pour l'espèce)
         if (payment.method === 'cash') {
-          await connection.query(
-            `UPDATE cash_sessions SET expected_closing_amount = expected_closing_amount + ? WHERE id = ?`,
-            [payment.amount, activeCashSessionId]
-          );
+          if (!isSessionClosed) {
+            await connection.query(
+              `UPDATE cash_sessions SET expected_closing_amount = expected_closing_amount + ? WHERE id = ?`,
+              [payment.amount, activeCashSessionId]
+            );
+          } else {
+            await connection.query(
+              `UPDATE cash_sessions SET post_closing_adjustments = post_closing_adjustments + ? WHERE id = ?`,
+              [payment.amount, activeCashSessionId]
+            );
+          }
         }
       }
     }
 
     // ===============================
-    // 📦 INSERT ITEMS + STOCK
+    // 📦 INSERT ITEMS + STOCK + ANOMALIES
     // ===============================
     for (const data of saleItemsData) {
-      const { product, quantity, unitPrice, priceType, discountAmount, totalPrice } = data;
+      const { product, quantity, unitPrice, priceType, discountAmount, totalPrice, oversellQuantity } = data;
 
       await connection.query(
         `INSERT INTO sale_items (
@@ -321,23 +393,27 @@ const createSale = async (req, res, next) => {
       );
 
       // ===============================
-      // 📉 STOCK MOVEMENT
+      // 📉 STOCK MOVEMENT & ANOMALIES
       // ===============================
       if (product.manage_stock) {
         const stockBefore = Number(product.current_stock);
-        const stockAfter = stockBefore - quantity;
+        const stockAfter = Math.max(0, stockBefore - quantity);
 
         await connection.query(
-          "UPDATE products SET current_stock = ? WHERE id = ?",
-          [stockAfter, product.id]
+          "UPDATE products SET current_stock = GREATEST(0.000, current_stock - ?) WHERE id = ?",
+          [quantity, product.id]
         );
+
+        const movementNote = oversellQuantity > 0
+          ? `Vente offline [${saleNumber}] : survente de ${oversellQuantity} unités constatée`
+          : null;
 
         await connection.query(
           `INSERT INTO inventory_movements (
             company_id, product_id, movement_type, quantity,
             stock_before, stock_after, reference_type, reference_id,
-            unit_cost, performed_by
-          ) VALUES (?, ?, 'sale', ?, ?, ?, 'sale', ?, ?, ?)`,
+            unit_cost, performed_by, note
+          ) VALUES (?, ?, 'sale', ?, ?, ?, 'sale', ?, ?, ?, ?)`,
           [
             companyId,
             product.id,
@@ -347,8 +423,28 @@ const createSale = async (req, res, next) => {
             saleId,
             product.cost_price,
             userId,
+            movementNote,
           ]
         );
+
+        if (oversellQuantity > 0) {
+          await connection.query(
+            `INSERT INTO stock_anomalies (
+              company_id, product_id, sale_id, offline_uuid, device_id,
+              system_stock_at_sync, sold_quantity, oversell_quantity, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+            [
+              companyId,
+              product.id,
+              saleId,
+              offline_uuid || null,
+              device_id || null,
+              stockBefore,
+              quantity,
+              oversellQuantity,
+            ]
+          );
+        }
       }
     }
 
@@ -468,10 +564,11 @@ const getSales = async (req, res, next) => {
         AND (
           s.sale_number LIKE ?
           OR s.client_name LIKE ?
+          OR c.full_name LIKE ?
         )
       `;
 
-      queryParams.push(`%${search}%`, `%${search}%`);
+      queryParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     // =========================

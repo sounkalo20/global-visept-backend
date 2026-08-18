@@ -20,7 +20,6 @@ const getEmployees = async (req, res, next) => {
         u.phone, 
         u.is_active as user_active,
         m.id as membership_id,
-        m.id as membership_id,
         m.role_id,
         r.name as role_name,
         m.is_active,

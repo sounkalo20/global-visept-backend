@@ -1,9 +1,15 @@
 const pool = require("../config/db");
 const AppError = require("../utils/AppError");
 
-const getOwnerId = async (companyId) => {
-  const [ownerRows] = await pool.query(
-    "SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1",
+const getOwnerId = async (companyId, connection = pool) => {
+  const [ownerRows] = await connection.query(
+    `SELECT m.user_id 
+     FROM memberships m
+     LEFT JOIN roles r ON m.role_id = r.id
+     WHERE m.company_id = ? 
+       AND (r.name = 'Propriétaire' OR m.role = 'owner')
+     ORDER BY (r.name = 'Propriétaire') DESC, (m.role = 'owner') DESC, m.id ASC
+     LIMIT 1`,
     [companyId]
   );
   return ownerRows.length > 0 ? ownerRows[0].user_id : null;

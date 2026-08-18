@@ -5,9 +5,15 @@ const ImportExportService = require('../services/ImportExportService');
 /**
  * Récupère l'owner_id d'une entreprise
  */
-const getOwnerId = async (companyId) => {
-  const [rows] = await pool.query(
-    "SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1",
+const getOwnerId = async (companyId, connection = pool) => {
+  const [rows] = await connection.query(
+    `SELECT m.user_id 
+     FROM memberships m
+     LEFT JOIN roles r ON m.role_id = r.id
+     WHERE m.company_id = ? 
+       AND (r.name = 'Propriétaire' OR m.role = 'owner')
+     ORDER BY (r.name = 'Propriétaire') DESC, (m.role = 'owner') DESC, m.id ASC
+     LIMIT 1`,
     [companyId]
   );
   return rows.length > 0 ? rows[0].user_id : null;

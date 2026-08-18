@@ -1,6 +1,23 @@
 const pool = require("../config/db");
 const AppError = require("../utils/AppError");
 
+/**
+ * Récupère de façon fiable l'ID du propriétaire d'une entreprise (RBAC)
+ */
+const getCompanyOwnerId = async (companyId, connection = pool) => {
+  const [ownerRows] = await connection.query(
+    `SELECT m.user_id 
+     FROM memberships m
+     LEFT JOIN roles r ON m.role_id = r.id
+     WHERE m.company_id = ? 
+       AND (r.name = 'Propriétaire' OR m.role = 'owner')
+     ORDER BY (r.name = 'Propriétaire') DESC, (m.role = 'owner') DESC, m.id ASC
+     LIMIT 1`,
+    [companyId]
+  );
+  return ownerRows.length > 0 ? ownerRows[0].user_id : null;
+};
+
 // ─── CRÉER UN PRODUIT ───────────────────────────────────
 const createProduct = async (req, res, next) => {
   const connection = await pool.getConnection();
@@ -78,14 +95,16 @@ const createProduct = async (req, res, next) => {
       }
     }
 
-    const [ownerRows] = await connection.query("SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1", [companyId]);
-    const owner_id = ownerRows.length > 0 ? ownerRows[0].user_id : null;
+    const owner_id = await getCompanyOwnerId(companyId, connection);
 
-    // Vérifier que la catégorie existe et appartient au propriétaire
-    if (category_id && owner_id) {
+    // Vérifier que la catégorie existe et est autorisée pour cette entreprise
+    if (category_id) {
       const [categories] = await connection.query(
-        'SELECT id FROM categories WHERE id = ? AND owner_id = ? AND deleted_at IS NULL',
-        [category_id, owner_id]
+        `SELECT id FROM categories 
+         WHERE id = ? 
+           AND (company_id = ? OR (owner_id = ? AND owner_id IS NOT NULL) OR owner_id IS NULL) 
+           AND deleted_at IS NULL`,
+        [category_id, companyId, owner_id]
       );
 
       if (categories.length === 0) {
@@ -222,7 +241,7 @@ const createProduct = async (req, res, next) => {
     }
 
     if (parsedWarehouseStocks.length > 0) {
-      const owner_id = req.user.id;
+      const owner_id = (await getCompanyOwnerId(companyId, connection)) || req.user.id;
       for (const stock of parsedWarehouseStocks) {
         if (stock.quantity && parseFloat(stock.quantity) > 0) {
           // Vérifier que l'entrepôt appartient au proprio
@@ -590,16 +609,16 @@ const updateProduct = async (req, res, next) => {
     }
 
     if (category_id !== undefined && category_id !== null) {
-      const [ownerRows] = await connection.query("SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1", [companyId]);
-      const owner_id = ownerRows.length > 0 ? ownerRows[0].user_id : null;
-      if (owner_id) {
-        const [categories] = await connection.query(
-          'SELECT id FROM categories WHERE id = ? AND owner_id = ? AND deleted_at IS NULL',
-          [category_id, owner_id],
-        );
-        if (categories.length === 0) {
-          throw new AppError('La catégorie spécifiée est introuvable.', 404);
-        }
+      const owner_id = await getCompanyOwnerId(companyId, connection);
+      const [categories] = await connection.query(
+        `SELECT id FROM categories 
+         WHERE id = ? 
+           AND (company_id = ? OR (owner_id = ? AND owner_id IS NOT NULL) OR owner_id IS NULL) 
+           AND deleted_at IS NULL`,
+        [category_id, companyId, owner_id],
+      );
+      if (categories.length === 0) {
+        throw new AppError('La catégorie spécifiée est introuvable.', 404);
       }
     }
 
@@ -647,13 +666,9 @@ const updateProduct = async (req, res, next) => {
 
     if (isCatalogable) {
       // Récupérer l'owner de l'entreprise
-      const [ownerRows] = await connection.query(
-        "SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1",
-        [companyId]
-      );
+      const ownerId = await getCompanyOwnerId(companyId, connection);
 
-      if (ownerRows.length > 0) {
-        const ownerId = ownerRows[0].user_id;
+      if (ownerId) {
 
         if (catalogProductId) {
           // 🔥 MISE À JOUR DU CATALOGUE (impacte TOUS les entrepôts)
@@ -1396,18 +1411,14 @@ const bulkProductAction = async (req, res, next) => {
       const targetCatId = params.category_id || null;
 
       if (targetCatId) {
-        const [ownerRows] = await connection.query(
-          "SELECT user_id FROM memberships WHERE company_id = ? AND role = 'owner' LIMIT 1",
-          [companyId]
-        );
-        const owner_id = ownerRows.length > 0 ? ownerRows[0].user_id : null;
+        const owner_id = await getCompanyOwnerId(companyId, connection);
 
         const [cat] = await connection.query(
           `SELECT id, name FROM categories 
            WHERE id = ? 
-             AND (owner_id = ? OR owner_id IN (SELECT user_id FROM memberships WHERE company_id = ?) OR owner_id IS NULL) 
+             AND (company_id = ? OR (owner_id = ? AND owner_id IS NOT NULL) OR owner_id IS NULL) 
              AND deleted_at IS NULL`,
-          [targetCatId, owner_id, companyId]
+          [targetCatId, companyId, owner_id]
         );
         if (cat.length === 0) {
           throw new AppError('La catégorie spécifiée est introuvable.', 404);

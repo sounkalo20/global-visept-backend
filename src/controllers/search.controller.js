@@ -130,14 +130,14 @@ const globalSearch = async (req, res, next) => {
       searchPromises.push(
         pool.query(
           `SELECT s.id, s.sale_number, s.total_amount, s.payment_status, s.sale_date,
-                  c.full_name as client_name
+                  COALESCE(c.full_name, s.client_name) as client_name
            FROM sales s
            LEFT JOIN clients c ON s.client_id = c.id
            WHERE s.company_id = ?
-             AND (s.sale_number LIKE ? OR c.full_name LIKE ?)
+             AND (s.sale_number LIKE ? OR c.full_name LIKE ? OR s.client_name LIKE ?)
            ORDER BY s.id DESC 
            LIMIT 5`,
-          [companyId, searchTerm, searchTerm]
+          [companyId, searchTerm, searchTerm, searchTerm]
         ).then(([rows]) =>
           rows.map((s) => ({
             type: 'sale',
@@ -277,8 +277,20 @@ const globalSearch = async (req, res, next) => {
       );
     }
 
-    const searchResultsArrays = await Promise.all(searchPromises);
-    const flattenedResults = searchResultsArrays.flat();
+    const searchResultsSettled = await Promise.allSettled(searchPromises);
+
+    // Logger les erreurs individuelles sans faire échouer la requête globale
+    const rejected = searchResultsSettled.filter((r) => r.status === 'rejected');
+    if (rejected.length > 0) {
+      console.error(
+        `[GlobalSearch] ${rejected.length} sous-requête(s) ont échoué :`,
+        rejected.map((r) => r.reason?.message || r.reason)
+      );
+    }
+
+    const flattenedResults = searchResultsSettled
+      .filter((r) => r.status === 'fulfilled')
+      .flatMap((r) => r.value);
 
     res.status(200).json({
       success: true,

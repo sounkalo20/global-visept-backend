@@ -154,7 +154,8 @@ const ownerSubscriptionContext = async (req, res, next) => {
        FROM companies c
        JOIN subscription_plans sp ON c.subscription_plan_id = sp.id
        JOIN memberships m ON m.company_id = c.id
-       WHERE m.user_id = ? AND m.role = 'owner' AND c.deleted_at IS NULL`,
+       LEFT JOIN roles r ON m.role_id = r.id
+       WHERE m.user_id = ? AND (r.name = 'Propriétaire' OR m.role = 'owner') AND c.deleted_at IS NULL`,
       [ownerId]
     );
 

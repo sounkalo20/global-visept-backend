@@ -13,10 +13,11 @@ const getAllOwners = async (req, res, next) => {
         const [owners] = await pool.query(`
             SELECT DISTINCT
                 u.id, u.first_name, u.last_name, u.email, u.phone, u.is_active, u.has_unlimited_access, u.created_at,
-                (SELECT COUNT(*) FROM memberships m2 WHERE m2.user_id = u.id AND m2.role = 'owner') as total_companies
+                (SELECT COUNT(*) FROM memberships m2 LEFT JOIN roles r2 ON m2.role_id = r2.id WHERE m2.user_id = u.id AND (r2.name = 'Propriétaire' OR m2.role = 'owner')) as total_companies
             FROM users u
             LEFT JOIN memberships m ON u.id = m.user_id
-            WHERE m.role = 'owner' OR m.id IS NULL
+            LEFT JOIN roles r ON m.role_id = r.id
+            WHERE r.name = 'Propriétaire' OR m.role = 'owner' OR m.id IS NULL
             ORDER BY u.created_at DESC
         `);
 
@@ -106,8 +107,9 @@ const grantUnlimitedAccess = async (req, res, next) => {
         const [updateResult] = await connection.query(`
             UPDATE companies c
             JOIN memberships m ON c.id = m.company_id
+            LEFT JOIN roles r ON m.role_id = r.id
             SET c.subscription_plan_id = ?, c.subscription_ends_at = NULL, c.subscription_status = 'active'
-            WHERE m.user_id = ? AND m.role = 'owner'
+            WHERE m.user_id = ? AND (r.name = 'Propriétaire' OR m.role = 'owner')
         `, [unlimitedPlanId, id]);
 
         const impactedCompaniesCount = updateResult.affectedRows;
@@ -159,8 +161,9 @@ const revokeUnlimitedAccess = async (req, res, next) => {
             const [updateResult] = await connection.query(`
                 UPDATE companies c
                 JOIN memberships m ON c.id = m.company_id
+                LEFT JOIN roles r ON m.role_id = r.id
                 SET c.subscription_plan_id = ?
-                WHERE m.user_id = ? AND m.role = 'owner' AND c.subscription_plan_id = ?
+                WHERE m.user_id = ? AND (r.name = 'Propriétaire' OR m.role = 'owner') AND c.subscription_plan_id = ?
             `, [defaultPlanId, id, unlimitedPlanId]);
             impactedCompaniesCount = updateResult.affectedRows;
         }

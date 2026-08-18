@@ -2,17 +2,21 @@ const pool = require('../config/db');
 const AppError = require('../utils/AppError');
 
 // ─── GÉNÉRER UNE RÉFÉRENCE UNIQUE ────────────────────────────────────────────
-const generateReference = async (companyId) => {
+const generateReference = async (companyId, connection = pool) => {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const prefix = `INV-${year}${month}`;
-  const [rows] = await pool.query(
-    `SELECT COUNT(*) as cnt FROM inventory_counts WHERE company_id = ? AND reference LIKE ?`,
-    [companyId, `${prefix}%`]
-  );
-  const seq = String((rows[0]?.cnt || 0) + 1).padStart(3, '0');
-  return `${prefix}-${seq}`;
+  try {
+    const [rows] = await connection.query(
+      `SELECT COUNT(*) as cnt FROM inventory_counts WHERE company_id = ? AND reference LIKE ?`,
+      [companyId, `${prefix}%`]
+    );
+    const seq = String((rows[0]?.cnt || 0) + 1).padStart(3, '0');
+    return `${prefix}-${seq}`;
+  } catch {
+    return `${prefix}-${Date.now().toString().slice(-4)}`;
+  }
 };
 
 // ─── CRÉER UNE SESSION D'INVENTAIRE ─────────────────────────────────────────
@@ -35,7 +39,7 @@ exports.createInventorySession = async (req, res, next) => {
     }
 
     // Générer référence unique
-    const reference = await generateReference(companyId);
+    const reference = await generateReference(companyId, connection);
 
     // Créer la session
     const [sessionResult] = await connection.query(
