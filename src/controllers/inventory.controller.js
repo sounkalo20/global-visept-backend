@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const AppError = require('../utils/AppError');
+const notificationService = require('../services/notification.service');
 
 // ─── GÉNÉRER UNE RÉFÉRENCE UNIQUE ────────────────────────────────────────────
 const generateReference = async (companyId, connection = pool) => {
@@ -453,6 +454,29 @@ exports.validateInventory = async (req, res, next) => {
     );
 
     await connection.commit();
+
+    // 🔔 Notification de validation d'inventaire
+    setImmediate(async () => {
+      try {
+        const [invData] = await pool.query('SELECT reference, name FROM inventory_counts WHERE id = ?', [id]);
+        const refName = invData[0] ? `${invData[0].reference} (${invData[0].name})` : `#${id}`;
+        const discVal = parseFloat(stats[0]?.total_discrepancy_value || 0);
+        const discCount = parseInt(stats[0]?.total_discrepancies || 0);
+
+        await notificationService.createNotification({
+          company_id: companyId,
+          type: 'inventory_done',
+          title: `Inventaire validé : ${refName}`,
+          message: `L'inventaire ${refName} a été validé. ${discCount} écart(s) régularisé(s) pour une valeur de ${Math.abs(discVal).toLocaleString('fr-FR')} FCFA.`,
+          severity: Math.abs(discVal) > 50000 ? 'warning' : 'info',
+          reference_type: 'inventory_count',
+          reference_id: id,
+          action_url: `/shop/inventory`,
+        });
+      } catch (err) {
+        console.error('Erreur notification validation inventaire:', err.message);
+      }
+    });
 
     res.json({
       success: true,

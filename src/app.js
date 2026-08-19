@@ -33,6 +33,11 @@ const profitRoutes = require('./routes/profit.routes');
 const searchRoutes = require('./routes/search.routes');
 const healthRoutes = require('./routes/health.routes');
 const stockAnomalyRoutes = require('./routes/stockAnomaly.routes');
+const notificationsRoutes = require('./routes/notifications.routes');
+const journalRoutes = require('./routes/journal.routes');
+const reportsRoutes = require('./routes/reports.routes');
+const supplierCreditRoutes = require('./routes/supplierCredit.routes');
+const stockPredictionRoutes = require('./routes/stockPrediction.routes');
 
 //routes pour les compagnies de type restaurant 
 const restaurantProductRoutes = require('./routes/restaurant/product.routes');
@@ -81,8 +86,12 @@ app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/supplier-orders', supplierOrderRoutes);
 app.use('/api/supplier-payments', supplierPaymentRoutes);
+app.use('/api/supplier-credits', supplierCreditRoutes);
 app.use('/api/returns', returnRoutes);
-// app.use('/api/reports', requireMembership(['owner', 'manager']), reportsRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/journal', journalRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/stock-predictions', stockPredictionRoutes);
 app.use('/api/inventories', inventoryRoutes);
 app.use('/api/rbac', rolesRoutes); // Point d'entrée pour les rôles et permissions
 app.use('/api/warehouses', warehouseRoutes);

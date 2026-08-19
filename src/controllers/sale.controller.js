@@ -1,6 +1,7 @@
 const pool = require("../config/db");
 const AppError = require("../utils/AppError");
 const debtService = require("../services/debt.service");
+const notificationService = require("../services/notification.service");
 
 // ─── GÉNÉRER UN NUMÉRO DE VENTE UNIQUE ──────────────────
 const generateSaleNumber = async (connection, companyId) => {
@@ -449,6 +450,38 @@ const createSale = async (req, res, next) => {
     }
 
     await connection.commit();
+
+    // 🔔 Vérification et déclenchement des alertes de stock bas en arrière-plan
+    setImmediate(async () => {
+      try {
+        for (const data of saleItemsData) {
+          if (data.product.manage_stock) {
+            const [pRows] = await pool.query(
+              'SELECT id, name, current_stock, low_stock_threshold FROM products WHERE id = ?',
+              [data.product.id]
+            );
+            if (pRows.length > 0) {
+              const curStock = parseFloat(pRows[0].current_stock || 0);
+              const thresh = parseFloat(pRows[0].low_stock_threshold || 5);
+              if (curStock <= thresh) {
+                await notificationService.createNotification({
+                  company_id: companyId,
+                  type: 'low_stock',
+                  title: `Alerte Stock : ${pRows[0].name}`,
+                  message: `Le stock de "${pRows[0].name}" est à ${curStock} (seuil d'alerte: ${thresh}). Réapprovisionnement conseillé.`,
+                  severity: curStock <= 0 ? 'critical' : 'warning',
+                  reference_type: 'product',
+                  reference_id: pRows[0].id,
+                  action_url: `/shop/products`,
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erreur déclenchement notification stock bas:', err.message);
+      }
+    });
 
     const [sales] = await connection.query(
       `SELECT s.*,

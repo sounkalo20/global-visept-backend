@@ -601,7 +601,7 @@ const getPaymentProofs = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const [memberships] = await connection.query(
+    const [memberships] = await pool.query(
       'SELECT id FROM memberships WHERE company_id = ? AND user_id = ? AND is_active = 1',
       [id, req.user.id]
     );
@@ -610,7 +610,7 @@ const getPaymentProofs = async (req, res, next) => {
       throw new AppError('Accès non autorisé.', 403);
     }
 
-    const [proofs] = await connection.query(
+    const [proofs] = await pool.query(
       `SELECT spp.*, sp.name as plan_name, sp.code as plan_code,
               si.period_start, si.period_end,
               u.first_name as reviewer_firstname, u.last_name as reviewer_lastname
@@ -632,6 +632,148 @@ const getPaymentProofs = async (req, res, next) => {
   }
 };
 
+// ─── PARAMÈTRES DU REÇU (F19) ───────────────────────────
+const defaultReceiptSettings = {
+  show_logo: true,
+  logo_url: null,
+  header_text: "Merci de votre visite !",
+  footer_text: "Les articles achetés ne sont ni repris ni échangés sauf accord préalable.",
+  show_address: true,
+  show_phone: true,
+  show_seller_name: true,
+  show_customer_name: true,
+  show_qr: false,
+  qr_content: "https://visept.app",
+  paper_size: "80mm",
+  font_size: "normal",
+  show_payment_details: true,
+  show_barcode: true,
+  currency_symbol: "FCFA"
+};
+
+const getReceiptSettings = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const [companies] = await pool.query(
+      'SELECT id, name, logo_url, address, phone, city, country, settings FROM companies WHERE id = ? AND deleted_at IS NULL',
+      [id]
+    );
+
+    if (companies.length === 0) {
+      throw new AppError('Entreprise introuvable.', 404);
+    }
+
+    const company = companies[0];
+    let settings = {};
+    try {
+      settings = typeof company.settings === 'string' ? JSON.parse(company.settings) : (company.settings || {});
+    } catch (e) {
+      settings = {};
+    }
+
+    const receiptConfig = {
+      ...defaultReceiptSettings,
+      logo_url: company.logo_url,
+      ...(settings.receipt || {}),
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        company_info: {
+          id: company.id,
+          name: company.name,
+          address: company.address,
+          city: company.city,
+          country: company.country,
+          phone: company.phone,
+          logo_url: company.logo_url,
+        },
+        receipt: receiptConfig,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateReceiptSettings = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    let newReceiptSettings = req.body;
+
+    if (typeof newReceiptSettings === 'string') {
+      try {
+        newReceiptSettings = JSON.parse(newReceiptSettings);
+      } catch (e) {
+        newReceiptSettings = {};
+      }
+    }
+
+    const [companies] = await pool.query(
+      'SELECT settings, logo_url FROM companies WHERE id = ? AND deleted_at IS NULL',
+      [id]
+    );
+
+    if (companies.length === 0) {
+      throw new AppError('Entreprise introuvable.', 404);
+    }
+
+    let existingSettings = {};
+    try {
+      existingSettings = typeof companies[0].settings === 'string'
+        ? JSON.parse(companies[0].settings)
+        : (companies[0].settings || {});
+    } catch (e) {
+      existingSettings = {};
+    }
+
+    // Convertir les chaînes 'true'/'false' en booléens si envoyés via FormData
+    const parseBool = (val) => val === true || val === 'true';
+    if (newReceiptSettings.show_logo !== undefined) newReceiptSettings.show_logo = parseBool(newReceiptSettings.show_logo);
+    if (newReceiptSettings.show_address !== undefined) newReceiptSettings.show_address = parseBool(newReceiptSettings.show_address);
+    if (newReceiptSettings.show_phone !== undefined) newReceiptSettings.show_phone = parseBool(newReceiptSettings.show_phone);
+    if (newReceiptSettings.show_seller_name !== undefined) newReceiptSettings.show_seller_name = parseBool(newReceiptSettings.show_seller_name);
+    if (newReceiptSettings.show_customer_name !== undefined) newReceiptSettings.show_customer_name = parseBool(newReceiptSettings.show_customer_name);
+    if (newReceiptSettings.show_qr !== undefined) newReceiptSettings.show_qr = parseBool(newReceiptSettings.show_qr);
+    if (newReceiptSettings.show_payment_details !== undefined) newReceiptSettings.show_payment_details = parseBool(newReceiptSettings.show_payment_details);
+
+    // Gestion du logo personnalisé de reçu si uploadé
+    let receiptLogoUrl = newReceiptSettings.logo_url || existingSettings?.receipt?.logo_url || companies[0].logo_url;
+    if (req.file) {
+      receiptLogoUrl = `${req.protocol}://${req.get('host')}/uploads/companies/${req.file.filename}`;
+    }
+
+    const mergedReceipt = {
+      ...defaultReceiptSettings,
+      ...(existingSettings.receipt || {}),
+      ...newReceiptSettings,
+      logo_url: receiptLogoUrl,
+    };
+
+    const updatedFullSettings = {
+      ...existingSettings,
+      receipt: mergedReceipt,
+    };
+
+    await pool.query(
+      'UPDATE companies SET settings = ?, updated_at = NOW() WHERE id = ?',
+      [JSON.stringify(updatedFullSettings), id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Paramètres du reçu mis à jour avec succès.',
+      data: {
+        receipt: mergedReceipt,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createCompany,
   getMyCompanies,
@@ -640,4 +782,6 @@ module.exports = {
   requestSubscriptionUpgrade,
   getCompanyInvoices,
   getPaymentProofs,
+  getReceiptSettings,
+  updateReceiptSettings,
 };

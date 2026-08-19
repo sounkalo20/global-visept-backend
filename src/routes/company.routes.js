@@ -1,15 +1,41 @@
 const express = require('express');
 const router = express.Router();
-const { createCompany, getMyCompanies, getCompanyById, getPaymentProofs, getCompanyInvoices, requestSubscriptionUpgrade, updateCompany } = require('../controllers/company.controller');
+const {
+  createCompany,
+  getMyCompanies,
+  getCompanyById,
+  getPaymentProofs,
+  getCompanyInvoices,
+  requestSubscriptionUpgrade,
+  updateCompany,
+  getReceiptSettings,
+  updateReceiptSettings,
+} = require('../controllers/company.controller');
 const authenticate = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const { createCompanySchema } = require('../validators/company.validator');
 const { uploadCompanyLogo, uploadPaymentProof } = require('../middlewares/upload.middleware');
 const { requireMembership } = require('../middlewares/membership.middleware');
 const { requirePermission } = require('../middlewares/permission.middleware');
+const { requireFeature } = require('../middlewares/subscription.middleware');
 
 // Toutes les routes sont protégées
 router.use(authenticate);
+
+// ─── PARAMÈTRES DU REÇU (F19) ───────────────────────────
+router.get(
+  '/:id/receipt-settings',
+  requireMembership(),
+  getReceiptSettings
+);
+
+router.put(
+  '/:id/receipt-settings',
+  requireMembership(),
+  requirePermission('settings.manage'),
+  uploadCompanyLogo,
+  updateReceiptSettings
+);
 
 // POST /api/companies - Créer une entreprise
 router.post('/', uploadCompanyLogo, (req, res, next) => {

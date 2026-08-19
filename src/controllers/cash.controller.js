@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const AppError = require("../utils/AppError");
+const notificationService = require("../services/notification.service");
 
 // --- Caisses (Registers) ---
 
@@ -434,6 +435,27 @@ exports.closeSession = async (req, res, next) => {
        WHERE id = ?`,
       [expectedClosing, actual_closing_amount, diff, notes || '', session_id]
     );
+
+    // 🔔 Alerte si écart de caisse constaté
+    if (Math.abs(diff) > 0) {
+      setImmediate(async () => {
+        try {
+          const formattedDiff = diff > 0 ? `+${diff.toLocaleString('fr-FR')}` : `${diff.toLocaleString('fr-FR')}`;
+          await notificationService.createNotification({
+            company_id: session.company_id,
+            type: 'session_anomaly',
+            title: `Écart de caisse (${formattedDiff} FCFA)`,
+            message: `La session de caisse #${session_id} a été clôturée avec un écart de ${formattedDiff} FCFA (Attendu: ${expectedClosing.toLocaleString('fr-FR')}, Compté: ${parseFloat(actual_closing_amount).toLocaleString('fr-FR')}).`,
+            severity: Math.abs(diff) > 5000 ? 'critical' : 'warning',
+            reference_type: 'cash_session',
+            reference_id: session_id,
+            action_url: `/shop/cash`,
+          });
+        } catch (err) {
+          console.error('Erreur notification clôture caisse:', err.message);
+        }
+      });
+    }
 
     res.json({
       success: true,

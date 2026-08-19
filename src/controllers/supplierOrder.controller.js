@@ -1,6 +1,7 @@
 // controllers/supplierOrder.controller.js
 const pool = require('../config/db');
 const AppError = require('../utils/AppError');
+const notificationService = require('../services/notification.service');
 
 // ─── GÉNÉRER UN NUMÉRO DE COMMANDE UNIQUE ──────────────
 const generateOrderNumber = async (connection, companyId) => {
@@ -15,7 +16,9 @@ const generateOrderNumber = async (connection, companyId) => {
     let sequence = 1;
     if (lastOrder.length > 0) {
         const lastSeq = parseInt(lastOrder[0].order_number.split('-').pop());
-        sequence = lastSeq + 1;
+        if (!isNaN(lastSeq)) {
+            sequence = lastSeq + 1;
+        }
     }
 
     return `${prefix}-${String(sequence).padStart(4, '0')}`;
@@ -23,86 +26,102 @@ const generateOrderNumber = async (connection, companyId) => {
 
 // ─── RECALCULER LES TOTAUX D'UNE COMMANDE ──────────────
 const recalculateOrderTotals = async (connection, orderId) => {
-    // Recalculer depuis les items
+    // Recalculer le subtotal depuis les items
     const [items] = await connection.query(
         'SELECT COALESCE(SUM(quantity_ordered * unit_cost), 0) as subtotal FROM supplier_order_items WHERE supplier_order_id = ?',
         [orderId]
     );
 
-    const subtotal = parseFloat(items[0].subtotal);
+    const subtotal = parseFloat(items[0].subtotal || 0);
 
-    const [order] = await connection.query(
-        'SELECT tax_amount, shipping_cost FROM supplier_orders WHERE id = ?',
+    const [orderRows] = await connection.query(
+        'SELECT tax_amount, shipping_cost, discount_type, discount_value FROM supplier_orders WHERE id = ?',
         [orderId]
     );
 
-    const tax = parseFloat(order[0].tax_amount || 0);
-    const shipping = parseFloat(order[0].shipping_cost || 0);
-    const total = subtotal + tax + shipping;
+    if (orderRows.length === 0) return;
+    const order = orderRows[0];
+
+    const tax = parseFloat(order.tax_amount || 0);
+    const shipping = parseFloat(order.shipping_cost || 0);
+    const discType = order.discount_type || 'none';
+    const discVal = parseFloat(order.discount_value || 0);
+
+    let discountAmount = 0;
+    if (discType === 'percentage') {
+        discountAmount = (subtotal * discVal) / 100;
+    } else if (discType === 'fixed') {
+        discountAmount = discVal;
+    }
+    discountAmount = Math.min(discountAmount, subtotal + tax + shipping);
+
+    const total = Math.max(0, subtotal + tax + shipping - discountAmount);
 
     // Récupérer le total payé
     const [payments] = await connection.query(
         'SELECT COALESCE(SUM(amount), 0) as total_paid FROM supplier_payments WHERE supplier_order_id = ?',
         [orderId]
     );
+    const totalPaid = parseFloat(payments[0].total_paid || 0);
 
-    const totalPaid = parseFloat(payments[0].total_paid);
-    const remaining = total - totalPaid;
+    // Récupérer le total des avoirs appliqués sur cette commande
+    const [creditApps] = await connection.query(
+        'SELECT COALESCE(SUM(amount_applied), 0) as total_credits FROM supplier_credit_applications WHERE supplier_order_id = ?',
+        [orderId]
+    );
+    const totalCreditsApplied = parseFloat(creditApps[0]?.total_credits || 0);
+
+    const remaining = Math.max(0, total - totalPaid - totalCreditsApplied);
 
     await connection.query(
-        'UPDATE supplier_orders SET subtotal = ?, total_amount = ?, total_paid = ?, remaining_balance = ? WHERE id = ?',
-        [subtotal, total, totalPaid, remaining, orderId]
+        'UPDATE supplier_orders SET subtotal = ?, discount_amount = ?, total_amount = ?, total_paid = ?, remaining_balance = ? WHERE id = ?',
+        [subtotal, discountAmount, total, totalPaid, remaining, orderId]
     );
 };
 
 // ─── METTRE À JOUR LE SOLDE DU FOURNISSEUR ─────────────
-// controllers/supplierOrder.controller.js (remplacer la fonction)
-
-// ─── METTRE À JOUR LE SOLDE DU FOURNISSEUR ─────────────
 const updateSupplierBalance = async (connection, supplierId, companyId) => {
-    // 1. Récupérer le solde initial du fournisseur (celui saisi à la création)
-    const [supplier] = await connection.query(
-        'SELECT id, current_balance FROM suppliers WHERE id = ? AND company_id = ?',
-        [supplierId, companyId]
-    );
-
-    if (supplier.length === 0) return;
-
-    // 2. Somme des remaining_balance de toutes les commandes non annulées
-    //    (ce sont les dettes par commande)
+    // 1. Somme des remaining_balance de toutes les commandes non annulées
     const [ordersResult] = await connection.query(
         `SELECT 
-       COALESCE(SUM(remaining_balance), 0) as total_remaining,
-       COALESCE(SUM(total_amount), 0) as total_purchases
-     FROM supplier_orders
-     WHERE supplier_id = ? AND company_id = ? AND status NOT IN ('canceled')`,
+           COALESCE(SUM(remaining_balance), 0) as total_remaining,
+           COALESCE(SUM(total_amount), 0) as total_purchases
+         FROM supplier_orders
+         WHERE supplier_id = ? AND company_id = ? AND status NOT IN ('canceled')`,
         [supplierId, companyId]
     );
 
-    const totalRemaining = parseFloat(ordersResult[0].total_remaining);
-    const totalPurchases = parseFloat(ordersResult[0].total_purchases);
+    const totalRemaining = parseFloat(ordersResult[0]?.total_remaining || 0);
+    const totalPurchases = parseFloat(ordersResult[0]?.total_purchases || 0);
 
-    // 3. Total des paiements GLOBAUX (non liés à une commande)
+    // 2. Total des paiements GLOBAUX (non liés à une commande)
     const [globalPayments] = await connection.query(
         `SELECT COALESCE(SUM(amount), 0) as total
-     FROM supplier_payments
-     WHERE supplier_id = ? AND company_id = ? AND supplier_order_id IS NULL`,
+         FROM supplier_payments
+         WHERE supplier_id = ? AND company_id = ? AND supplier_order_id IS NULL`,
         [supplierId, companyId]
     );
+    const totalGlobalPayments = parseFloat(globalPayments[0]?.total || 0);
 
-    const totalGlobalPayments = parseFloat(globalPayments[0].total);
+    // 3. Total des avoirs disponibles
+    const [creditsRes] = await connection.query(
+        `SELECT COALESCE(SUM(remaining_amount), 0) as total_credits
+         FROM supplier_credits
+         WHERE supplier_id = ? AND company_id = ? AND status IN ('available', 'partially_used')`,
+        [supplierId, companyId]
+    );
+    const totalAvailableCredits = parseFloat(creditsRes[0]?.total_credits || 0);
 
-    // 4. Le solde actuel = total dû sur les commandes - paiements globaux déjà effectués
-    //    (Les paiements liés aux commandes sont déjà déduits dans remaining_balance)
-    const calculatedBalance = totalRemaining - totalGlobalPayments;
+    // Solde net = dettes commandes - paiements d'avance non alloués - avoirs non utilisés
+    const calculatedBalance = totalRemaining - totalGlobalPayments - totalAvailableCredits;
 
-    // 5. Mettre à jour le fournisseur
+    // 4. Mettre à jour le fournisseur
     await connection.query(
         `UPDATE suppliers 
-     SET current_balance = ?, 
-         total_purchases = ?
-     WHERE id = ?`,
-        [Math.max(0, calculatedBalance), totalPurchases, supplierId]
+         SET current_balance = ?, 
+             total_purchases = ?
+         WHERE id = ? AND company_id = ?`,
+        [calculatedBalance, totalPurchases, supplierId, companyId]
     );
 };
 
@@ -116,6 +135,8 @@ const createOrder = async (req, res, next) => {
             expected_at,
             shipping_cost = 0,
             tax_amount = 0,
+            discount_type = 'none',
+            discount_value = 0,
             notes,
             items,
             initial_payment,
@@ -154,18 +175,29 @@ const createOrder = async (req, res, next) => {
 
         // Calculer le subtotal
         const subtotal = items.reduce((sum, item) => sum + (item.quantity_ordered * item.unit_cost), 0);
-        const totalAmount = subtotal + parseFloat(shipping_cost) + parseFloat(tax_amount);
+        
+        let discountAmount = 0;
+        const parsedDiscountVal = parseFloat(discount_value || 0);
+        if (discount_type === 'percentage') {
+            discountAmount = (subtotal * parsedDiscountVal) / 100;
+        } else if (discount_type === 'fixed') {
+            discountAmount = parsedDiscountVal;
+        }
+        discountAmount = Math.min(discountAmount, subtotal + parseFloat(shipping_cost) + parseFloat(tax_amount));
+
+        const totalAmount = Math.max(0, subtotal + parseFloat(shipping_cost) + parseFloat(tax_amount) - discountAmount);
 
         // Insérer la commande
         const [orderResult] = await connection.query(
             `INSERT INTO supplier_orders (
         company_id, supplier_id, order_number, reference, status,
-        subtotal, tax_amount, shipping_cost, total_amount,
+        subtotal, tax_amount, shipping_cost, discount_type, discount_value, discount_amount, total_amount,
         ordered_at, expected_at, notes, created_by
-      ) VALUES (?, ?, ?, ?, 'ordered', ?, ?, ?, ?, NOW(), ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, 'ordered', ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)`,
             [
                 companyId, supplier_id, orderNumber, reference || null,
-                subtotal, tax_amount, shipping_cost, totalAmount,
+                subtotal, parseFloat(tax_amount), parseFloat(shipping_cost),
+                discount_type, parsedDiscountVal, discountAmount, totalAmount,
                 expected_at || null, notes || null, req.user.id,
             ]
         );
@@ -366,12 +398,25 @@ const getOrderById = async (req, res, next) => {
             [id]
         );
 
+        // Avoirs appliqués sur cette commande
+        const [appliedCredits] = await pool.query(
+            `SELECT sca.*, sc.reference as credit_reference, sc.reason as credit_reason,
+                    CONCAT(u.first_name, ' ', COALESCE(u.last_name, '')) as applied_by_name
+             FROM supplier_credit_applications sca
+             JOIN supplier_credits sc ON sca.supplier_credit_id = sc.id
+             LEFT JOIN users u ON sca.applied_by = u.id
+             WHERE sca.supplier_order_id = ?
+             ORDER BY sca.applied_at DESC`,
+            [id]
+        );
+
         res.status(200).json({
             success: true,
             data: {
                 order,
                 items,
                 payments,
+                applied_credits: appliedCredits,
             },
         });
     } catch (error) {
@@ -385,7 +430,7 @@ const updateOrder = async (req, res, next) => {
     try {
         const { id } = req.params;
         const companyId = req.company.id;
-        const { reference, expected_at, shipping_cost, tax_amount, notes, items } = req.body;
+        const { reference, expected_at, shipping_cost, tax_amount, discount_type, discount_value, notes, items } = req.body;
 
         const [orders] = await connection.query(
             'SELECT * FROM supplier_orders WHERE id = ? AND company_id = ?',
@@ -412,6 +457,8 @@ const updateOrder = async (req, res, next) => {
         if (expected_at !== undefined) { updates.push('expected_at = ?'); values.push(expected_at || null); }
         if (shipping_cost !== undefined) { updates.push('shipping_cost = ?'); values.push(parseFloat(shipping_cost)); }
         if (tax_amount !== undefined) { updates.push('tax_amount = ?'); values.push(parseFloat(tax_amount)); }
+        if (discount_type !== undefined) { updates.push('discount_type = ?'); values.push(discount_type); }
+        if (discount_value !== undefined) { updates.push('discount_value = ?'); values.push(parseFloat(discount_value)); }
         if (notes !== undefined) { updates.push('notes = ?'); values.push(notes || null); }
 
         if (updates.length > 0) {
