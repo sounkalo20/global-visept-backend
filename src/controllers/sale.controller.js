@@ -218,7 +218,7 @@ const createSale = async (req, res, next) => {
     // 🚨 PAYMENT VALIDATION & MULTI-PAYMENTS
     // ===============================
     const roundedTotal = Math.round(totalAmount * 100) / 100;
-    
+
     // Normaliser les paiements
     let finalPayments = [];
     if (payments && Array.isArray(payments) && payments.length > 0) {
@@ -265,7 +265,7 @@ const createSale = async (req, res, next) => {
     const amountDue = 0;
     const finalPaymentStatus = "paid";
     const primaryPaymentMethod = finalPayments[0].method;
-    
+
     // ===============================
     // 🔍 CHECK CASH SESSION ACTIVE OU FERMÉE
     // ===============================
@@ -349,7 +349,7 @@ const createSale = async (req, res, next) => {
            VALUES (?, 'sale_in', ?, ?, ?, ?)`,
           [activeCashSessionId, payment.method, payment.amount, saleId, movementNote]
         );
-        
+
         if (payment.method === 'cash') {
           if (!isSessionClosed) {
             await connection.query(

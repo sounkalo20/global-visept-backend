@@ -48,7 +48,7 @@ const createSaleSchema = z.object({
   payment_reference: z.string().max(100).optional().nullable(),
   payments: z.array(salePaymentItemSchema).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
-  
+
   // Champs optionnels Mode Hors-Ligne & Audit
   offline_uuid: z.string().uuid("offline_uuid doit être un UUID valide.").optional().nullable(),
   device_id: z.string().max(64).optional().nullable(),
