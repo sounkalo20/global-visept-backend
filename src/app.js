@@ -22,6 +22,7 @@ const supplierOrderRoutes = require('./routes/supplierOrder.routes')
 const supplierPaymentRoutes = require('./routes/supplierPayment.routes');
 const warehouseRoutes = require('./routes/warehouse.routes');
 const employeeRoutes = require('./routes/employee.routes');
+const proformaRoutes = require('./routes/proforma.routes');
 
 //routes pour les compagnies de type restaurant 
 const restaurantProductRoutes = require('./routes/restaurant/product.routes');
@@ -65,6 +66,7 @@ app.use('/api/supplier-orders', supplierOrderRoutes);
 app.use('/api/supplier-payments', supplierPaymentRoutes);
 app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/employees', employeeRoutes);
+app.use('/api/proformas', proformaRoutes);
 
 //dashboard routes
 app.use('/api/shop', dashboardRoutes);

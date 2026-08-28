@@ -32,6 +32,7 @@ const createSale = async (req, res, next) => {
     await connection.beginTransaction();
 
     const {
+      proforma_id,
       client_id,
       client_name,
       items,
@@ -207,14 +208,15 @@ const createSale = async (req, res, next) => {
 
     const [saleResult] = await connection.query(
       `INSERT INTO sales (
-        company_id, sale_number, client_id, client_name,
+        company_id, sale_number, proforma_id, client_id, client_name,
         subtotal, discount_amount, discount_type, discount_value,
         tax_amount, total_amount, payment_status, amount_paid, amount_due,
         payment_method, payment_reference, status, seller_id, notes, sale_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, NOW())`,
       [
         companyId,
         saleNumber,
+        proforma_id || null,
         client_id || null,
         client_name || null,
         subtotal,
@@ -234,6 +236,16 @@ const createSale = async (req, res, next) => {
     );
 
     const saleId = saleResult.insertId;
+
+    // Si la vente provient de la conversion d'un proforma, mettre à jour le proforma
+    if (proforma_id) {
+      await connection.query(
+        `UPDATE proformas 
+         SET status = 'converted', converted_sale_id = ?, converted_at = NOW(), converted_by = ?
+         WHERE id = ? AND company_id = ?`,
+        [saleId, userId, proforma_id, companyId]
+      );
+    }
 
     // ===============================
     // 📦 INSERT ITEMS + STOCK
