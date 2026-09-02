@@ -44,6 +44,9 @@ const restaurantProductRoutes = require('./routes/restaurant/product.routes');
 const restaurantSaleRoutes = require('./routes/restaurant/sale.routes');
 const restaurantDebtRoutes = require('./routes/restaurant/debt.routes');
 const restaurantPaymentRoutes = require('./routes/restaurant/payment.route');
+const restaurantModifierRoutes = require('./routes/restaurant/modifier.routes');
+const restaurantSpaceRoutes = require('./routes/restaurant/space.routes');
+const restaurantTableRoutes = require('./routes/restaurant/table.routes');
 
 //dashboard routes
 const dashboardRoutes = require('./routes/dashboard.routes');
@@ -112,6 +115,9 @@ app.use('/api/restaurant', restaurantProductRoutes);
 app.use('/api/restaurant', restaurantSaleRoutes);
 app.use('/api/restaurant', restaurantDebtRoutes);
 app.use('/api/restaurant', restaurantPaymentRoutes);
+app.use('/api/restaurant', restaurantModifierRoutes);
+app.use('/api/restaurant', restaurantSpaceRoutes);
+app.use('/api/restaurant', restaurantTableRoutes);
 
 // 404 Handler
 app.use((req, res, next) => {

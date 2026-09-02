@@ -97,7 +97,38 @@ const createSale = async (req, res, next) => {
             if (item.price_type === 'custom') priceType = 'custom';
 
             const discountAmount = Number(item.discount_amount || 0);
-            const totalPrice = unitPrice * quantity - discountAmount;
+
+            // ── Calcul des modificateurs ──────────────────────────────
+            let modifiersTotal = 0;
+            const modifierChoices = []; // snapshot pour l'historique
+
+            if (item.modifier_choices && Array.isArray(item.modifier_choices) && item.modifier_choices.length > 0) {
+                for (const choice of item.modifier_choices) {
+                    // Récupérer l'option en BDD pour valider et obtenir les snapshots
+                    const [optRows] = await connection.query(
+                        `SELECT mo.id, mo.name AS option_name, mo.extra_price,
+                                mg.id AS group_id, mg.name AS group_name
+                         FROM modifier_options mo
+                         JOIN modifier_groups mg ON mg.id = mo.modifier_group_id
+                         WHERE mo.id = ? AND mg.company_id = ? AND mo.is_active = 1`,
+                        [choice.modifier_option_id, companyId]
+                    );
+
+                    if (optRows.length === 0) continue; // option inconnue ou désactivée — on ignore
+
+                    const opt = optRows[0];
+                    modifiersTotal += parseFloat(opt.extra_price) || 0;
+                    modifierChoices.push({
+                        modifier_group_id: opt.group_id,
+                        modifier_option_id: opt.id,
+                        group_name:   opt.group_name,
+                        option_name:  opt.option_name,
+                        extra_price:  parseFloat(opt.extra_price) || 0,
+                    });
+                }
+            }
+
+            const totalPrice = (unitPrice + modifiersTotal) * quantity - discountAmount;
 
             subtotal += totalPrice;
 
@@ -107,6 +138,8 @@ const createSale = async (req, res, next) => {
                 unitPrice,
                 priceType,
                 discountAmount,
+                modifiersTotal,
+                modifierChoices,
                 totalPrice,
                 item,
             });
@@ -156,20 +189,41 @@ const createSale = async (req, res, next) => {
 
         // Insérer les items
         for (const data of saleItemsData) {
-            const { product, quantity, unitPrice, priceType, discountAmount, totalPrice } = data;
+            const { product, quantity, unitPrice, priceType, discountAmount, modifiersTotal, modifierChoices, totalPrice } = data;
 
-            await connection.query(
+            const [itemResult] = await connection.query(
                 `INSERT INTO sale_items (
           sale_id, product_id, quantity, price_type, unit_price,
           retail_price_ref, wholesale_price_ref, total_price,
-          discount_amount, cost_price, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          discount_amount, modifiers_total, cost_price, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     saleId, product.id, quantity, priceType, unitPrice,
                     product.retail_price, product.wholesale_price, totalPrice,
-                    discountAmount, product.cost_price, data.item.notes || null,
+                    discountAmount, modifiersTotal || 0, product.cost_price, data.item.notes || null,
                 ]
             );
+
+            const saleItemId = itemResult.insertId;
+
+            // Insérer les choix de modificateurs (snapshot historique)
+            if (modifierChoices && modifierChoices.length > 0) {
+                for (const choice of modifierChoices) {
+                    await connection.query(
+                        `INSERT INTO sale_item_modifier_choices
+                           (sale_item_id, modifier_group_id, modifier_option_id, group_name, option_name, extra_price)
+                         VALUES (?, ?, ?, ?, ?, ?)`,
+                        [
+                            saleItemId,
+                            choice.modifier_group_id,
+                            choice.modifier_option_id,
+                            choice.group_name,
+                            choice.option_name,
+                            choice.extra_price,
+                        ]
+                    );
+                }
+            }
         }
 
         await connection.commit();
@@ -323,6 +377,15 @@ const getSaleById = async (req, res, next) => {
        WHERE si.sale_id = ?`,
             [id]
         );
+
+        // Charger les choix de modificateurs pour chaque item
+        for (const item of items) {
+            const [choices] = await pool.query(
+                `SELECT * FROM sale_item_modifier_choices WHERE sale_item_id = ? ORDER BY modifier_group_id, id`,
+                [item.id]
+            );
+            item.modifier_choices = choices;
+        }
 
         res.status(200).json({
             success: true,
