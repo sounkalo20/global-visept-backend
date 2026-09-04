@@ -154,36 +154,56 @@ const createSale = async (req, res, next) => {
         }
 
         const totalAmount = Math.round((subtotal - globalDiscount) * 100) / 100;
-        const paid = Math.round(Number(amount_paid) * 100) / 100;
+        const paid = Math.round(Number(amount_paid || 0) * 100) / 100;
 
-        if (!amount_paid || paid < totalAmount) {
-            throw new AppError(
-                `Le montant payé (${paid.toLocaleString()} FCFA) est insuffisant. Total : ${totalAmount.toLocaleString()} FCFA.`,
-                400
-            );
+        const requestedStatus = req.body.status || (req.body.payment_status === 'unpaid' ? 'pending' : 'completed');
+        const isPendingOrder = requestedStatus === 'pending' || req.body.payment_status === 'unpaid' || req.body.is_kitchen_order;
+
+        let finalSaleStatus = isPendingOrder ? 'pending' : 'completed';
+        let finalPaymentStatus = 'unpaid';
+
+        if (isPendingOrder) {
+            finalPaymentStatus = paid > 0 ? (paid >= totalAmount ? 'paid' : 'partial') : 'unpaid';
+        } else {
+            if (paid < totalAmount) {
+                throw new AppError(
+                    `Le montant payé (${paid.toLocaleString()} FCFA) est insuffisant. Total : ${totalAmount.toLocaleString()} FCFA.`,
+                    400
+                );
+            }
+            finalPaymentStatus = 'paid';
         }
 
+        const amountDue = Math.max(0, Math.round((totalAmount - paid) * 100) / 100);
         const changeAmount = paid > totalAmount ? Math.round((paid - totalAmount) * 100) / 100 : 0;
-        const finalPaymentStatus = 'paid';
 
         // Numéro de vente
         const saleNumber = await generateSaleNumber(connection, companyId);
+        const tableSessionId = req.body.table_session_id || null;
+        const tableId = req.body.table_id || null;
 
         const [saleResult] = await connection.query(
             `INSERT INTO sales (
-        company_id, sale_number, client_id, client_name,
+        company_id, sale_number, client_id, client_name, table_session_id, order_mode,
         subtotal, discount_amount, discount_type, discount_value,
         tax_amount, total_amount, payment_status, amount_paid, amount_due,
         payment_method, payment_reference, status, seller_id, notes, sale_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 0, ?, ?, 'completed', ?, ?, NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
             [
-                companyId, saleNumber, client_id || null, client_name || null,
+                companyId, saleNumber, client_id || null, client_name || null, tableSessionId, req.body.order_type || 'dine_in',
                 subtotal, globalDiscount, discount_type || null, discount_value || null,
-                totalAmount, finalPaymentStatus, paid,
-                payment_method, payment_reference || null,
-                userId, notes || null,
+                totalAmount, finalPaymentStatus, paid, amountDue,
+                payment_method || (isPendingOrder ? 'pending' : 'cash'), payment_reference || null,
+                finalSaleStatus, userId, notes || null,
             ]
         );
+
+        if (tableId) {
+            await connection.query(
+                "UPDATE restaurant_tables SET status = 'occupied' WHERE id = ? AND company_id = ?",
+                [tableId, companyId]
+            );
+        }
 
         const saleId = saleResult.insertId;
 
@@ -691,6 +711,153 @@ const getSalesStats = async (req, res, next) => {
     }
 };
 
+// ─── PAIEMENT FRACTIONNÉ / SPLIT BILL ────────────────────
+const processSplitPayment = async (req, res, next) => {
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const { id } = req.params; // sale_id
+        const { payments, items_paid } = req.body;
+        const companyId = req.company.id;
+        const userId = req.user.id;
+
+        const [sales] = await connection.query(
+            'SELECT * FROM sales WHERE id = ? AND company_id = ? FOR UPDATE',
+            [id, companyId]
+        );
+
+        if (sales.length === 0) throw new AppError('Vente introuvable.', 404);
+        const sale = sales[0];
+
+        if (sale.status === 'canceled') {
+            throw new AppError('Impossible de régler une commande annulée.', 400);
+        }
+
+        // Vérifier si une session de caisse est ouverte pour cet utilisateur
+        const [cashSessions] = await connection.query(
+            'SELECT id FROM cash_sessions WHERE company_id = ? AND user_id = ? AND status = \'open\'',
+            [companyId, userId]
+        );
+        const cashSessionId = cashSessions.length > 0 ? cashSessions[0].id : null;
+
+        let addedPaidAmount = 0;
+
+        // 1. Enregistrer les paiements fournis
+        if (Array.isArray(payments) && payments.length > 0) {
+            for (const p of payments) {
+                const amount = Number(p.amount);
+                if (amount <= 0) continue;
+
+                addedPaidAmount += amount;
+
+                await connection.query(
+                    `INSERT INTO sale_payments (sale_id, cash_session_id, payment_method, amount, reference, created_at)
+                     VALUES (?, ?, ?, ?, ?, NOW())`,
+                    [id, cashSessionId, p.payment_method || 'cash', amount, p.reference || null]
+                );
+
+                // Si session de caisse active, enregistrer le mouvement de caisse
+                if (cashSessionId) {
+                    await connection.query(
+                        `INSERT INTO cash_movements (session_id, type, payment_method, amount, reference_id, notes, created_at)
+                         VALUES (?, 'sale_in', ?, ?, ?, 'Paiement restaurant', NOW())`,
+                        [cashSessionId, p.payment_method || 'cash', amount, id]
+                    );
+                }
+            }
+        }
+
+        // 2. Mettre à jour paid_quantity sur les plats si transmis
+        if (Array.isArray(items_paid) && items_paid.length > 0) {
+            for (const item of items_paid) {
+                const qtyPaid = Number(item.quantity || 1);
+                await connection.query(
+                    `UPDATE sale_items 
+                     SET paid_quantity = LEAST(quantity, paid_quantity + ?) 
+                     WHERE id = ? AND sale_id = ?`,
+                    [qtyPaid, item.item_id, id]
+                );
+            }
+        }
+
+        // 3. Recalculer le montant payé total
+        const [totalPaidRows] = await connection.query(
+            'SELECT COALESCE(SUM(amount), 0) as total_paid FROM sale_payments WHERE sale_id = ?',
+            [id]
+        );
+        const newTotalPaid = Number(totalPaidRows[0].total_paid);
+        const newAmountDue = Math.max(0, Number(sale.total_amount) - newTotalPaid);
+        const isFullyPaid = newAmountDue === 0;
+
+        const newPaymentStatus = isFullyPaid ? 'paid' : newTotalPaid > 0 ? 'partial' : 'unpaid';
+        const newSaleStatus = isFullyPaid ? 'completed' : 'pending';
+
+        await connection.query(
+            `UPDATE sales 
+             SET amount_paid = ?, amount_due = ?, payment_status = ?, status = ? 
+             WHERE id = ?`,
+            [newTotalPaid, newAmountDue, newPaymentStatus, newSaleStatus, id]
+        );
+
+        await connection.commit();
+
+        res.status(200).json({
+            success: true,
+            message: isFullyPaid ? 'Commande entièrement réglée !' : 'Paiement partiel enregistré.',
+            data: {
+                sale_id: Number(id),
+                total_amount: Number(sale.total_amount),
+                amount_paid: newTotalPaid,
+                amount_due: newAmountDue,
+                payment_status: newPaymentStatus,
+                status: newSaleStatus,
+            },
+        });
+    } catch (error) {
+        await connection.rollback();
+        next(error);
+    } finally {
+        connection.release();
+    }
+};
+
+// ─── CHANGER LE STATUT D'UN PLAT (KDS) ───────────────────
+const updateItemStatus = async (req, res, next) => {
+    try {
+        const { itemId } = req.params;
+        const { status } = req.body;
+        const companyId = req.company.id;
+
+        const allowedStatus = ['pending', 'preparing', 'ready', 'served', 'canceled'];
+        if (!allowedStatus.includes(status)) {
+            throw new AppError('Statut de plat invalide.', 400);
+        }
+
+        const [items] = await pool.query(
+            `SELECT si.id 
+             FROM sale_items si 
+             JOIN sales s ON si.sale_id = s.id 
+             WHERE si.id = ? AND s.company_id = ?`,
+            [itemId, companyId]
+        );
+
+        if (items.length === 0) {
+            throw new AppError('Plat introuvable.', 404);
+        }
+
+        await pool.query('UPDATE sale_items SET item_status = ? WHERE id = ?', [status, itemId]);
+
+        res.status(200).json({
+            success: true,
+            message: `Statut du plat mis à jour : ${status}`,
+            data: { item_id: Number(itemId), item_status: status },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createSale,
     getSales,
@@ -698,4 +865,6 @@ module.exports = {
     updateSale,
     cancelSale,
     getSalesStats,
-};
+    processSplitPayment,
+    updateItemStatus,
+};

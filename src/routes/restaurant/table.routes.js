@@ -17,14 +17,15 @@ const {
 
 router.use(authenticate);
 
-router.get('/tables', requireMembership(), requirePermission('tables.view'), getFloorPlan);
+router.get('/tables', requireMembership(), requirePermission(['tables.view', 'tables.open', 'sales.create', 'sales.view']), getFloorPlan);
 router.post('/tables', requireMembership(), requirePermission('tables.manage'), createTable);
 router.put('/tables/positions', requireMembership(), requirePermission('tables.manage'), updatePositions);
 router.put('/tables/:id', requireMembership(), requirePermission('tables.manage'), updateTable);
 
 // Sessions & Statuts
-router.post('/tables/open-session', requireMembership(), requirePermission('tables.open'), openSession);
-router.put('/tables/:id/status', requireMembership(), requirePermission('tables.status'), updateStatus);
+router.post('/tables/open-session', requireMembership(), requirePermission(['tables.open', 'sales.create']), openSession);
+router.put('/tables/:id/status', requireMembership(), requirePermission(['tables.status', 'sales.create']), updateStatus);
+
 
 // Transfert & Fusion
 router.post('/tables/transfer', requireMembership(), requirePermission('tables.transfer'), transferTable);

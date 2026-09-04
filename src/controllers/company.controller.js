@@ -95,11 +95,48 @@ const createCompany = async (req, res, next) => {
     }
 
     // Assigner les permissions au Caissier
-    const [cashierPermsData] = await connection.query("SELECT id FROM permissions WHERE code IN ('dashboard.view', 'products.view', 'sales.view', 'sales.create', 'sales.print', 'sales.return')");
+    const [cashierPermsData] = await connection.query("SELECT id FROM permissions WHERE code IN ('dashboard.view', 'products.view', 'sales.view', 'sales.create', 'sales.print', 'sales.return', 'cash.sessions.manage', 'cash.registers.manage')");
     if (cashierPermsData.length > 0) {
       const cashierPerms = cashierPermsData.map(p => [cashierRoleId, p.id]);
       await connection.query('INSERT INTO role_permissions (role_id, permission_id) VALUES ?', [cashierPerms]);
     }
+
+    // --- Si entreprise Restaurant (business_type_id = 2 ou similaire), ajouter les rôles Restaurant ---
+    const isRestaurant = parseInt(business_type_id) === 2;
+    if (isRestaurant) {
+      // 1. Rôle Serveur
+      const [waiterRoleRes] = await connection.query(
+        "INSERT INTO roles (company_id, name, description, is_system) VALUES (?, 'Serveur', 'Service en salle, prise de commande sur table', 1)",
+        [companyId]
+      );
+      const waiterRoleId = waiterRoleRes.insertId;
+      const [waiterPerms] = await connection.query("SELECT id FROM permissions WHERE code IN ('tables.view', 'tables.open', 'sales.create', 'sales.view', 'sales.edit')");
+      if (waiterPerms.length > 0) {
+        await connection.query('INSERT INTO role_permissions (role_id, permission_id) VALUES ?', [waiterPerms.map(p => [waiterRoleId, p.id])]);
+      }
+
+      // 2. Rôle Cuisinier
+      const [cookRoleRes] = await connection.query(
+        "INSERT INTO roles (company_id, name, description, is_system) VALUES (?, 'Cuisinier', 'Suivi des bons en cuisine et préparation (KDS)', 1)",
+        [companyId]
+      );
+      const cookRoleId = cookRoleRes.insertId;
+      const [cookPerms] = await connection.query("SELECT id FROM permissions WHERE code IN ('kitchen.view', 'kitchen.manage', 'products.view')");
+      if (cookPerms.length > 0) {
+        await connection.query('INSERT INTO role_permissions (role_id, permission_id) VALUES ?', [cookPerms.map(p => [cookRoleId, p.id])]);
+      }
+
+      // 3. Rôle Barman
+      const [bartenderRoleRes] = await connection.query(
+        "INSERT INTO roles (company_id, name, description, is_system) VALUES (?, 'Barman', 'Suivi des bons bar et préparation des consommations', 1)",
+        [companyId]
+      );
+      const bartenderRoleId = bartenderRoleRes.insertId;
+      if (cookPerms.length > 0) {
+        await connection.query('INSERT INTO role_permissions (role_id, permission_id) VALUES ?', [cookPerms.map(p => [bartenderRoleId, p.id])]);
+      }
+    }
+
 
     // Ajouter l'utilisateur comme OWNER
     await connection.query(

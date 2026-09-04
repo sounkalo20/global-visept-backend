@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 // ─── LISTER LES EMPLOYÉS DE L'ENTREPRISE ─────────────────────
 const getEmployees = async (req, res, next) => {
   try {
-    const { company_id } = req.query;
+    const company_id = req.query.company_id || req.company?.id || req.body?.company_id;
 
     if (!company_id) {
       throw new AppError("L'ID de l'entreprise est requis.", 400);
@@ -49,7 +49,7 @@ const createEmployee = async (req, res, next) => {
   try {
     await connection.beginTransaction();
 
-    const { company_id } = req.body;
+    const company_id = req.body.company_id || req.company?.id || req.query?.company_id;
     const { first_name, last_name, email, phone, password, role_id } = req.body;
 
     if (!company_id) {
@@ -69,17 +69,26 @@ const createEmployee = async (req, res, next) => {
       throw new AppError("Vous ne pouvez pas assigner le rôle Propriétaire.", 400);
     }
 
+    const cleanEmail = email ? email.trim().toLowerCase() : null;
+    const cleanPhone = (phone && phone.trim() !== '') ? phone.trim() : null;
+
+    if (!cleanEmail) {
+      throw new AppError("L'adresse email est requise.", 400);
+    }
+
     let userId;
 
-    // Vérifier si l'email existe déjà dans le système
+    // Vérifier si un utilisateur avec cet email ou ce téléphone existe déjà dans le système
     const [existingUsers] = await connection.query(
-      'SELECT id FROM users WHERE email = ?',
-      [email]
+      `SELECT id, email, phone FROM users 
+       WHERE (email IS NOT NULL AND LOWER(email) = ?) 
+          OR (phone IS NOT NULL AND phone != '' AND phone = ?)`,
+      [cleanEmail, cleanPhone || '___NO_PHONE___']
     );
 
     if (existingUsers.length > 0) {
       userId = existingUsers[0].id;
-      
+
       // Vérifier si l'utilisateur est déjà dans cette entreprise
       const [existingMemberships] = await connection.query(
         'SELECT id, is_active FROM memberships WHERE user_id = ? AND company_id = ?',
@@ -88,16 +97,16 @@ const createEmployee = async (req, res, next) => {
 
       if (existingMemberships.length > 0) {
         if (!existingMemberships[0].is_active) {
-            // Réactiver l'adhésion si elle était désactivée
-            await connection.query(
-                'UPDATE memberships SET is_active = 1, role_id = ? WHERE id = ?',
-                [role_id, existingMemberships[0].id]
-            );
+          // Réactiver l'adhésion si elle était désactivée
+          await connection.query(
+            'UPDATE memberships SET is_active = 1, role_id = ? WHERE id = ?',
+            [role_id, existingMemberships[0].id]
+          );
         } else {
-            throw new AppError('Cet utilisateur fait déjà partie de la boutique.', 409);
+          throw new AppError('Cet utilisateur (email ou téléphone) est déjà inscrit dans votre entreprise.', 409);
         }
       } else {
-        // L'utilisateur existe mais n'est pas dans l'entreprise, on l'ajoute
+        // L'utilisateur existe déjà sur le SaaS (autre entreprise), on l'ajoute à cette entreprise
         await connection.query(
           `INSERT INTO memberships (user_id, company_id, role_id, is_active, joined_at)
            VALUES (?, ?, ?, 1, NOW())`,
@@ -116,7 +125,7 @@ const createEmployee = async (req, res, next) => {
       const [insertUser] = await connection.query(
         `INSERT INTO users (first_name, last_name, email, phone, password_hash, is_active)
          VALUES (?, ?, ?, ?, ?, 1)`,
-        [first_name, last_name, email, phone || null, password_hash]
+        [first_name, last_name || null, cleanEmail, cleanPhone, password_hash]
       );
 
       userId = insertUser.insertId;
@@ -128,6 +137,7 @@ const createEmployee = async (req, res, next) => {
         [userId, company_id, role_id]
       );
     }
+
 
     await connection.commit();
 
@@ -165,7 +175,8 @@ const updateEmployee = async (req, res, next) => {
     await connection.beginTransaction();
 
     const { id } = req.params; // ID de l'utilisateur (user_id)
-    const { company_id, first_name, last_name, phone, password, role_id, is_active } = req.body;
+    const company_id = req.body.company_id || req.company?.id || req.query?.company_id;
+    const { first_name, last_name, phone, password, role_id, is_active } = req.body;
 
     if (!company_id) {
       throw new AppError("L'ID de l'entreprise est requis.", 400);
@@ -202,7 +213,7 @@ const updateEmployee = async (req, res, next) => {
     }
     if (phone !== undefined) {
       updateFields.push('phone = ?');
-      updateValues.push(phone);
+      updateValues.push(phone && phone.trim() !== '' ? phone.trim() : null);
     }
     if (password) {
       const salt = await bcrypt.genSalt(10);
@@ -281,7 +292,7 @@ const updateEmployee = async (req, res, next) => {
 const deleteEmployee = async (req, res, next) => {
   try {
     const { id } = req.params; // user_id
-    const { company_id } = req.query;
+    const company_id = req.query.company_id || req.company?.id || req.body?.company_id;
 
     if (!company_id) {
       throw new AppError("L'ID de l'entreprise est requis.", 400);

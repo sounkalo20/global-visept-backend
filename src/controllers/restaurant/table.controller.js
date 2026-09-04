@@ -241,9 +241,14 @@ const openSession = async (req, res, next) => {
   try {
     await connection.beginTransaction();
 
-    const { table_id, number_of_guests } = req.body;
+    const { table_id, number_of_guests, staff_id } = req.body;
     const companyId = req.company.id;
     const userId = req.user.id;
+    const assignedStaffId = staff_id || userId;
+
+    if (!table_id) {
+      throw new AppError('L\'ID de la table (table_id) est requis.', 400);
+    }
 
     // Verrouiller la table pour éviter l'ouverture simultanée par 2 serveurs
     const [tables] = await connection.query(
@@ -262,6 +267,14 @@ const openSession = async (req, res, next) => {
       );
     }
 
+    // Vérifier la capacité d'accueil de la table
+    if (table.capacity && parseInt(number_of_guests) > table.capacity) {
+      throw new AppError(
+        `Cette table a une capacité maximale de ${table.capacity} place(s) (${number_of_guests} couvert(s) demandés).`,
+        400
+      );
+    }
+
     // Vérifier si une session open existe déjà
     const [existingSessions] = await connection.query(
       'SELECT id FROM table_sessions WHERE table_id = ? AND status = \'open\'',
@@ -272,11 +285,11 @@ const openSession = async (req, res, next) => {
       throw new AppError('Une session est déjà ouverte sur cette table.', 409);
     }
 
-    // 1. Créer la session de table
+    // 1. Créer la session de table avec le serveur assigné
     const [sessionResult] = await connection.query(
       `INSERT INTO table_sessions (company_id, table_id, opened_at, number_of_guests, staff_id, status)
        VALUES (?, ?, NOW(), ?, ?, 'open')`,
-      [companyId, table_id, parseInt(number_of_guests) || 1, userId]
+      [companyId, table_id, parseInt(number_of_guests) || 1, assignedStaffId]
     );
 
     const sessionId = sessionResult.insertId;

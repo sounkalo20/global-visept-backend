@@ -52,8 +52,11 @@ const requirePermission = (requiredPermissionCode) => {
         return next();
       }
 
-      // Autoriser si l'utilisateur a la permission demandée
-      if (userPermissions.includes(requiredPermissionCode)) {
+      // Autoriser si l'utilisateur a la permission demandée (tableau ou chaîne)
+      const permsToCheck = Array.isArray(requiredPermissionCode) ? requiredPermissionCode : [requiredPermissionCode];
+      const hasAccess = permsToCheck.some(code => userPermissions.includes(code));
+
+      if (hasAccess) {
         // Injecter les permissions dans req pour un usage ultérieur si besoin
         req.membership.permissions = userPermissions;
         req.membership.role_name = role.name;
