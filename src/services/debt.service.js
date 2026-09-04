@@ -83,6 +83,7 @@ const getEnrichedDebtById = async (connection, debtId, companyId) => {
             s.sale_date,
             s.status as sale_status,
             s.subtotal as sale_subtotal,
+            s.discount_amount as sale_discount_amount,
             s.discount_type as sale_discount_type,
             s.discount_value as sale_discount_value,
 
