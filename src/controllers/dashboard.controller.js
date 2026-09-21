@@ -5,11 +5,17 @@ const AppError = require('../utils/AppError');
 const getDashboardStats = async (req, res, next) => {
     try {
         const companyId = req.company.id;
-        const today = new Date().toISOString().split('T')[0];
-        const firstDayOfMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
 
-        // ─── VENTES DU JOUR ──────────────────────────────
-        const [todaySales] = await pool.query(
+        // ─── DATES : paramètres ou défaut = mois en cours ─────────
+        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const defaultStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
+        const startDate = req.query.start_date || defaultStart;
+        const endDate   = req.query.end_date   || today;
+
+        // ─── STATISTIQUES GLOBALES (sur la période) ───────────────
+        const [periodStats] = await pool.query(
             `SELECT 
         COUNT(*) as total_sales,
         COALESCE(SUM(total_amount - returned_amount), 0) as total_revenue,
@@ -17,24 +23,11 @@ const getDashboardStats = async (req, res, next) => {
         COALESCE(AVG(total_amount - returned_amount), 0) as average_sale,
         COUNT(DISTINCT client_id) as unique_clients
        FROM sales
-       WHERE company_id = ? AND DATE(sale_date) = ? AND status = 'completed'`,
-            [companyId, today]
+       WHERE company_id = ? AND DATE(sale_date) BETWEEN ? AND ? AND status = 'completed'`,
+            [companyId, startDate, endDate]
         );
 
-        // ─── VENTES DU MOIS ──────────────────────────────
-        const [monthSales] = await pool.query(
-            `SELECT 
-        COUNT(*) as total_sales,
-        COALESCE(SUM(total_amount - returned_amount), 0) as total_revenue,
-        COALESCE(SUM(returned_amount), 0) as total_returned,
-        COALESCE(SUM(amount_paid), 0) as total_paid,
-        COALESCE(SUM(amount_due), 0) as total_due
-       FROM sales
-       WHERE company_id = ? AND DATE(sale_date) >= ? AND status = 'completed'`,
-            [companyId, firstDayOfMonth]
-        );
-
-        // ─── DETTES CLIENTS ──────────────────────────────
+        // ─── DETTES CLIENTS (état actuel — pas de filtre date) ────
         const [debts] = await pool.query(
             `SELECT 
         COUNT(*) as total_debts,
@@ -45,17 +38,17 @@ const getDashboardStats = async (req, res, next) => {
             [companyId]
         );
 
-        // ─── DÉPENSES DU MOIS ────────────────────────────
+        // ─── DÉPENSES (sur la période) ────────────────────────────
         const [expenses] = await pool.query(
             `SELECT 
         COUNT(*) as total_expenses,
         COALESCE(SUM(amount), 0) as total_amount
        FROM expenses
-       WHERE company_id = ? AND expense_date >= ? AND deleted_at IS NULL`,
-            [companyId, firstDayOfMonth]
+       WHERE company_id = ? AND expense_date BETWEEN ? AND ? AND deleted_at IS NULL`,
+            [companyId, startDate, endDate]
         );
 
-        // ─── PRODUITS ────────────────────────────────────
+        // ─── PRODUITS (état actuel — pas de filtre date) ──────────
         const [products] = await pool.query(
             `SELECT 
         COUNT(*) as total,
@@ -66,7 +59,7 @@ const getDashboardStats = async (req, res, next) => {
             [companyId]
         );
 
-        // ─── CLIENTS ─────────────────────────────────────
+        // ─── CLIENTS (état actuel — pas de filtre date) ───────────
         const [clients] = await pool.query(
             `SELECT 
         COUNT(*) as total,
@@ -76,7 +69,7 @@ const getDashboardStats = async (req, res, next) => {
             [companyId]
         );
 
-        // ─── FOURNISSEURS ────────────────────────────────
+        // ─── FOURNISSEURS (état actuel — pas de filtre date) ──────
         const [suppliers] = await pool.query(
             `SELECT 
         COUNT(*) as total,
@@ -86,7 +79,7 @@ const getDashboardStats = async (req, res, next) => {
             [companyId]
         );
 
-        // ─── TOP PRODUITS (30 jours) ─────────────────────
+        // ─── TOP PRODUITS (sur la période) ───────────────────────
         const [topProducts] = await pool.query(
             `SELECT p.id, p.name, p.image_url,
               SUM(si.quantity) as total_sold,
@@ -95,15 +88,15 @@ const getDashboardStats = async (req, res, next) => {
        JOIN products p ON si.product_id = p.id
        JOIN sales s ON si.sale_id = s.id
        WHERE s.company_id = ? AND s.status = 'completed'
-         AND s.sale_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+         AND DATE(s.sale_date) BETWEEN ? AND ?
          AND p.product_type = 'product'
        GROUP BY p.id, p.name, p.image_url
        ORDER BY total_sold DESC
        LIMIT 10`,
-            [companyId]
+            [companyId, startDate, endDate]
         );
 
-        // ─── TOP CLIENTS (30 jours) ──────────────────────
+        // ─── TOP CLIENTS (sur la période) ────────────────────────
         const [topClients] = await pool.query(
             `SELECT c.id, c.full_name, c.phone,
               COUNT(s.id) as total_purchases,
@@ -111,14 +104,14 @@ const getDashboardStats = async (req, res, next) => {
        FROM sales s
        JOIN clients c ON s.client_id = c.id
        WHERE s.company_id = ? AND s.status = 'completed'
-         AND s.sale_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+         AND DATE(s.sale_date) BETWEEN ? AND ?
        GROUP BY c.id, c.full_name, c.phone
        ORDER BY total_spent DESC
        LIMIT 5`,
-            [companyId]
+            [companyId, startDate, endDate]
         );
 
-        // ─── VENTES 7 DERNIERS JOURS ─────────────────────
+        // ─── ÉVOLUTION DES VENTES (sur la période, groupé par jour) ─
         const [weeklySales] = await pool.query(
             `SELECT 
         DATE(sale_date) as date,
@@ -126,13 +119,13 @@ const getDashboardStats = async (req, res, next) => {
         COALESCE(SUM(total_amount - returned_amount), 0) as revenue
        FROM sales
        WHERE company_id = ? AND status = 'completed'
-         AND sale_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+         AND DATE(sale_date) BETWEEN ? AND ?
        GROUP BY DATE(sale_date)
        ORDER BY date ASC`,
-            [companyId]
+            [companyId, startDate, endDate]
         );
 
-        // ─── VENTES PAR MÉTHODE DE PAIEMENT (mois) ───────
+        // ─── VENTES PAR MÉTHODE DE PAIEMENT (sur la période) ─────
         const [salesByPayment] = await pool.query(
             `SELECT 
         payment_method,
@@ -140,16 +133,16 @@ const getDashboardStats = async (req, res, next) => {
         COALESCE(SUM(total_amount - returned_amount), 0) as total
        FROM sales
        WHERE company_id = ? AND status = 'completed'
-         AND DATE(sale_date) >= ?
+         AND DATE(sale_date) BETWEEN ? AND ?
        GROUP BY payment_method`,
-            [companyId, firstDayOfMonth]
+            [companyId, startDate, endDate]
         );
 
         res.status(200).json({
             success: true,
             data: {
-                today: todaySales[0],
-                this_month: monthSales[0],
+                period: { start: startDate, end: endDate },
+                summary: periodStats[0],
                 debts: debts[0],
                 expenses: expenses[0],
                 products: products[0],
