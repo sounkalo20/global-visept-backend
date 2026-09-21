@@ -177,35 +177,83 @@ const createSale = async (req, res, next) => {
         const amountDue = Math.max(0, Math.round((totalAmount - paid) * 100) / 100);
         const changeAmount = paid > totalAmount ? Math.round((paid - totalAmount) * 100) / 100 : 0;
 
-        // Numéro de vente
-        const saleNumber = await generateSaleNumber(connection, companyId);
         const tableSessionId = req.body.table_session_id || null;
         const tableId = req.body.table_id || null;
+        const orderType = req.body.order_type || 'dine_in';
 
-        const [saleResult] = await connection.query(
-            `INSERT INTO sales (
-        company_id, sale_number, client_id, client_name, table_session_id, order_mode,
-        subtotal, discount_amount, discount_type, discount_value,
-        tax_amount, total_amount, payment_status, amount_paid, amount_due,
-        payment_method, payment_reference, status, seller_id, notes, sale_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [
-                companyId, saleNumber, client_id || null, client_name || null, tableSessionId, req.body.order_type || 'dine_in',
-                subtotal, globalDiscount, discount_type || null, discount_value || null,
-                totalAmount, finalPaymentStatus, paid, amountDue,
-                payment_method || (isPendingOrder ? 'pending' : 'cash'), payment_reference || null,
-                finalSaleStatus, userId, notes || null,
-            ]
-        );
+        let saleId = null;
+        let saleNumber = null;
 
-        if (tableId) {
+        let existingSale = null;
+        if (tableSessionId) {
+            const [pendingSales] = await connection.query(
+                `SELECT id, sale_number FROM sales WHERE table_session_id = ? AND status = 'pending' LIMIT 1`,
+                [tableSessionId]
+            );
+            if (pendingSales.length > 0) {
+                existingSale = pendingSales[0];
+            }
+        }
+
+        if (existingSale) {
+            saleId = existingSale.id;
+            saleNumber = existingSale.sale_number;
+            await connection.query('DELETE FROM sale_items WHERE sale_id = ?', [saleId]);
+            await connection.query(
+                `UPDATE sales SET
+                    client_id = ?, client_name = ?, table_id = ?, table_session_id = ?, order_type = ?,
+                    subtotal = ?, discount_amount = ?, discount_type = ?, discount_value = ?,
+                    total_amount = ?, payment_status = ?, amount_paid = ?, amount_due = ?,
+                    payment_method = ?, payment_reference = ?, status = ?, seller_id = ?, notes = ?
+                 WHERE id = ?`,
+                [
+                    client_id || null, client_name || null, tableId, tableSessionId, orderType,
+                    subtotal, globalDiscount, discount_type || null, discount_value || null,
+                    totalAmount, finalPaymentStatus, paid, amountDue,
+                    payment_method || (isPendingOrder ? 'pending' : 'cash'), payment_reference || null,
+                    finalSaleStatus, userId, notes || null, saleId
+                ]
+            );
+        } else {
+            saleNumber = await generateSaleNumber(connection, companyId);
+            const [saleResult] = await connection.query(
+                `INSERT INTO sales (
+            company_id, sale_number, client_id, client_name, table_id, table_session_id, order_type,
+            subtotal, discount_amount, discount_type, discount_value,
+            tax_amount, total_amount, payment_status, amount_paid, amount_due,
+            payment_method, payment_reference, status, seller_id, notes, sale_date
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [
+                    companyId, saleNumber, client_id || null, client_name || null, tableId, tableSessionId, orderType,
+                    subtotal, globalDiscount, discount_type || null, discount_value || null,
+                    totalAmount, finalPaymentStatus, paid, amountDue,
+                    payment_method || (isPendingOrder ? 'pending' : 'cash'), payment_reference || null,
+                    finalSaleStatus, userId, notes || null,
+                ]
+            );
+            saleId = saleResult.insertId;
+        }
+
+        // Mise à jour de l'état de la table et de la session
+        if (finalPaymentStatus === 'paid' || finalSaleStatus === 'completed') {
+            if (tableSessionId) {
+                await connection.query(
+                    "UPDATE table_sessions SET status = 'closed', closed_at = NOW() WHERE id = ?",
+                    [tableSessionId]
+                );
+            }
+            if (tableId) {
+                await connection.query(
+                    "UPDATE restaurant_tables SET status = 'needs_cleaning' WHERE id = ? AND company_id = ?",
+                    [tableId, companyId]
+                );
+            }
+        } else if (tableId) {
             await connection.query(
                 "UPDATE restaurant_tables SET status = 'occupied' WHERE id = ? AND company_id = ?",
                 [tableId, companyId]
             );
         }
-
-        const saleId = saleResult.insertId;
 
         // Insérer les items
         for (const data of saleItemsData) {
@@ -215,8 +263,8 @@ const createSale = async (req, res, next) => {
                 `INSERT INTO sale_items (
           sale_id, product_id, quantity, price_type, unit_price,
           retail_price_ref, wholesale_price_ref, total_price,
-          discount_amount, modifiers_total, cost_price, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          discount_amount, modifiers_total, cost_price, item_status, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
                 [
                     saleId, product.id, quantity, priceType, unitPrice,
                     product.retail_price, product.wholesale_price, totalPrice,
@@ -302,6 +350,8 @@ const getSales = async (req, res, next) => {
       FROM sales s
       LEFT JOIN clients c ON s.client_id = c.id
       LEFT JOIN users u ON s.seller_id = u.id
+      LEFT JOIN restaurant_tables rt ON s.table_id = rt.id
+      LEFT JOIN restaurant_spaces rsp ON rt.space_id = rsp.id
       WHERE s.company_id = ?
       AND s.status != 'canceled'
     `;
@@ -328,7 +378,8 @@ const getSales = async (req, res, next) => {
 
         let query = `
       SELECT s.*, c.first_name as client_first_name, c.last_name as client_last_name,
-             c.phone as client_phone, u.first_name as seller_name
+             c.phone as client_phone, u.first_name as seller_name,
+             rt.table_number, rt.table_name, rsp.name as space_name
       ${baseQuery}
       ORDER BY s.${sortColumn} ${order}
       LIMIT ? OFFSET ?
@@ -338,13 +389,24 @@ const getSales = async (req, res, next) => {
         const salesParams = [...queryParams, parseInt(limit), offset];
         const [sales] = await pool.query(query, salesParams);
 
-        // Compter les items
+        // Charger les items et choix de modificateurs pour chaque vente
         for (const sale of sales) {
-            const [itemsCount] = await pool.query(
-                'SELECT COUNT(*) as count FROM sale_items WHERE sale_id = ?',
+            const [items] = await pool.query(
+                `SELECT si.*, p.name as product_name, p.image_url as product_image
+                 FROM sale_items si
+                 JOIN products p ON si.product_id = p.id
+                 WHERE si.sale_id = ?`,
                 [sale.id]
             );
-            sale.items_count = itemsCount?.[0]?.count || 0;
+            for (const item of items) {
+                const [choices] = await pool.query(
+                    `SELECT * FROM sale_item_modifier_choices WHERE sale_item_id = ? ORDER BY modifier_group_id, id`,
+                    [item.id]
+                );
+                item.modifier_choices = choices;
+            }
+            sale.items = items;
+            sale.items_count = items.length;
         }
 
         res.status(200).json({
@@ -799,6 +861,21 @@ const processSplitPayment = async (req, res, next) => {
              WHERE id = ?`,
             [newTotalPaid, newAmountDue, newPaymentStatus, newSaleStatus, id]
         );
+
+        if (isFullyPaid) {
+            if (sale.table_session_id) {
+                await connection.query(
+                    "UPDATE table_sessions SET status = 'closed', closed_at = NOW() WHERE id = ?",
+                    [sale.table_session_id]
+                );
+            }
+            if (sale.table_id) {
+                await connection.query(
+                    "UPDATE restaurant_tables SET status = 'needs_cleaning' WHERE id = ? AND company_id = ?",
+                    [sale.table_id, companyId]
+                );
+            }
+        }
 
         await connection.commit();
 
